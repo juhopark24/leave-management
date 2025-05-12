@@ -284,7 +284,7 @@ def leave():
                 start_date = request.form['start_date']
                 end_date = request.form['end_date']
                 reason = request.form['reason'].strip()
-                created_at = format_kst_datetime(get_kst_now())
+                created_at = get_kst_now()
                 emp = Employee.query.get(employee_id)
                 selected_employee = str(employee_id)
                 selected_type = type
@@ -435,20 +435,23 @@ def get_requests():
 @login_required
 def cancel_request(req_id):
     req = LeaveRequest.query.get(req_id)
-    # 자신의 요청이거나 관리자인 경우만 취소 가능
-    if not req or (session.get('user_id') != req.applicant_id and Employee.query.get(session['user_id']).role != 'admin'):
+    user_id = session.get('user_id')
+    is_admin = Employee.query.get(user_id).role == 'admin'
+
+    # 본인 요청이거나 관리자인 경우만 취소 가능
+    if not req or (user_id != req.applicant_id and not is_admin):
         flash('권한이 없습니다.')
         return redirect(url_for('leave'))
 
-    # 대기중(pending)인 경우 즉시 취소
-    if req.status == 'pending':
+    # 대기중(pending) + 본인 요청이면 즉시 취소
+    if req.status == 'pending' and user_id == req.applicant_id:
         req.status = 'cancelled'
-        req.cancel_at = format_kst_datetime(get_kst_now())
-        req.cancel_reason = request.form.get('cancel_reason', '').strip()
+        req.cancel_at = get_kst_now()
         db.session.commit()
         flash('신청이 즉시 취소되었습니다.')
         return redirect(url_for('leave'))
-    
+
+    # 승인된 경우 등은 기존대로 취소 요청(사유 입력)
     if req.status == 'approved' and not req.cancel_requested:
         cancel_reason = request.form.get('cancel_reason', '').strip()
         if not cancel_reason:
@@ -460,11 +463,11 @@ def cancel_request(req_id):
         # 취소 요청 처리
         req.cancel_requested = True
         req.cancel_reason = cancel_reason
-        req.cancel_at = format_kst_datetime(get_kst_now())
+        req.cancel_at = get_kst_now()
         req.status = 'cancel_pending'
         # 로그 추가
         log = SystemLog(
-            timestamp=format_kst_datetime(get_kst_now()),
+            timestamp=get_kst_now(),
             action='cancel_request',
             employee_name=req.employee.name,
             details=f'휴가 취소 요청: {req.type} ({req.start_date} ~ {req.end_date}), 사유: {cancel_reason}'
@@ -492,7 +495,7 @@ def approve(req_id):
     emp = Employee.query.get(req.target_id)
     if req.status in ['pending','cancel_pending']:
         req.status = 'approved'
-        req.processed_at = format_kst_datetime(get_kst_now())
+        req.processed_at = get_kst_now()
         if req.type in ['연차','반차(오전)', '반차(오후)']:
             # 승인 시 used_leave/remaining_leave는 이미 차감되어 있음
             pass
@@ -512,7 +515,7 @@ def reject(req_id):
     emp = Employee.query.get(req.target_id)
     if req.status in ['pending','cancel_pending']:
         req.status = 'rejected'
-        req.processed_at = format_kst_datetime(get_kst_now())
+        req.processed_at = get_kst_now()
         if req.type in ['연차','반차(오전)', '반차(오후)']:
             # 거절 시 used_leave/remaining_leave 원복
             emp.used_leave = round_to_half(emp.used_leave - req.leave_days)
@@ -532,7 +535,7 @@ def approve_cancel(req_id):
             emp.used_leave = round_to_half(emp.used_leave - req.leave_days)
             emp.remaining_leave = round_to_half(emp.annual_leave - emp.used_leave)
         req.status = 'cancelled'
-        req.processed_at = format_kst_datetime(get_kst_now())
+        req.processed_at = get_kst_now()
         db.session.commit()
     return redirect(url_for('status'))
 
@@ -543,7 +546,7 @@ def reject_cancel(req_id):
     req = LeaveRequest.query.get(req_id)
     if req.status == 'cancel_pending':
         req.status = 'approved'  # 취소 거절 시 다시 승인 상태로
-        req.processed_at = format_kst_datetime(get_kst_now())
+        req.processed_at = get_kst_now()
         db.session.commit()
     return redirect(url_for('status'))
 
@@ -1346,6 +1349,9 @@ def admin_required(f):
 
 if __name__ == '__main__':
     with app.app_context():
+        # 모든 공휴일 데이터 삭제
+        Holiday.query.delete()
+        db.session.commit()
         db.create_all()
         
         # 기존 데이터 마이그레이션

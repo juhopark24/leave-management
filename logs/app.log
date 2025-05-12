@@ -22,3 +22,29 @@
 2025-05-12 21:43:28,655 INFO: TimeOff Manager startup [in /Users/juhopark/workspace/leave-tracker/app.py:42]
 2025-05-12 21:44:24,065 INFO: TimeOff Manager startup [in /Users/juhopark/workspace/leave-tracker/app.py:42]
 2025-05-12 21:44:25,964 INFO: TimeOff Manager startup [in /Users/juhopark/workspace/leave-tracker/app.py:42]
+2025-05-12 21:50:38,025 INFO: TimeOff Manager startup [in /Users/juhopark/workspace/leave-tracker/app.py:42]
+2025-05-12 21:50:39,025 INFO: TimeOff Manager startup [in /Users/juhopark/workspace/leave-tracker/app.py:42]
+2025-05-12 21:52:04,258 ERROR: Database error in leave request: (builtins.TypeError) SQLite DateTime type only accepts Python datetime and date objects as input.
+[SQL: INSERT INTO leave_request (applicant_id, target_id, type, start_date, end_date, reason, status, created_at, processed_at, leave_days, cancel_requested, cancel_reason, cancel_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: [{'start_date': datetime.datetime(2025, 5, 30, 0, 0), 'applicant_id': 1, 'end_date': datetime.datetime(2025, 5, 30, 0, 0), 'type': '연차', 'reason': '11', 'target_id': 3, 'created_at': '2025-05-12 21:52:04', 'leave_days': 1, 'processed_at': None, 'cancel_reason': None, 'cancel_at': None}]] [in /Users/juhopark/workspace/leave-tracker/app.py:401]
+2025-05-12 21:53:35,929 ERROR: Database error in leave request: (builtins.TypeError) SQLite DateTime type only accepts Python datetime and date objects as input.
+[SQL: INSERT INTO leave_request (applicant_id, target_id, type, start_date, end_date, reason, status, created_at, processed_at, leave_days, cancel_requested, cancel_reason, cancel_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: [{'start_date': datetime.datetime(2025, 5, 30, 0, 0), 'applicant_id': 1, 'end_date': datetime.datetime(2025, 5, 30, 0, 0), 'type': '연차', 'reason': '11', 'target_id': 3, 'created_at': '2025-05-12 21:53:35', 'leave_days': 1, 'processed_at': None, 'cancel_reason': None, 'cancel_at': None}]] [in /Users/juhopark/workspace/leave-tracker/app.py:401]
+2025-05-12 21:53:45,771 ERROR: Database error in leave request: (builtins.TypeError) SQLite DateTime type only accepts Python datetime and date objects as input.
+[SQL: INSERT INTO leave_request (applicant_id, target_id, type, start_date, end_date, reason, status, created_at, processed_at, leave_days, cancel_requested, cancel_reason, cancel_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: [{'start_date': datetime.datetime(2025, 5, 30, 0, 0), 'applicant_id': 1, 'end_date': datetime.datetime(2025, 5, 30, 0, 0), 'type': '연차', 'reason': '11', 'target_id': 3, 'created_at': '2025-05-12 21:53:45', 'leave_days': 1, 'processed_at': None, 'cancel_reason': None, 'cancel_at': None}]] [in /Users/juhopark/workspace/leave-tracker/app.py:401]
+2025-05-12 21:53:50,834 ERROR: Database error in leave request: (builtins.TypeError) SQLite DateTime type only accepts Python datetime and date objects as input.
+[SQL: INSERT INTO leave_request (applicant_id, target_id, type, start_date, end_date, reason, status, created_at, processed_at, leave_days, cancel_requested, cancel_reason, cancel_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: [{'start_date': datetime.datetime(2025, 5, 30, 0, 0), 'applicant_id': 1, 'end_date': datetime.datetime(2025, 5, 30, 0, 0), 'type': '연차', 'reason': '11', 'target_id': 3, 'created_at': '2025-05-12 21:53:50', 'leave_days': 1, 'processed_at': None, 'cancel_reason': None, 'cancel_at': None}]] [in /Users/juhopark/workspace/leave-tracker/app.py:401]
+2025-05-12 21:53:58,587 ERROR: Database error in leave request: (builtins.TypeError) SQLite DateTime type only accepts Python datetime and date objects as input.
+[SQL: INSERT INTO leave_request (applicant_id, target_id, type, start_date, end_date, reason, status, created_at, processed_at, leave_days, cancel_requested, cancel_reason, cancel_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: [{'start_date': datetime.datetime(2025, 5, 13, 0, 0), 'applicant_id': 1, 'end_date': datetime.datetime(2025, 5, 13, 0, 0), 'type': '반차(오전)', 'reason': '111', 'target_id': 3, 'created_at': '2025-05-12 21:53:58', 'leave_days': 0.5, 'processed_at': None, 'cancel_reason': None, 'cancel_at': None}]] [in /Users/juhopark/workspace/leave-tracker/app.py:401]
+2025-05-12 21:55:02,815 INFO: TimeOff Manager startup [in /Users/juhopark/workspace/leave-tracker/app.py:42]
+2025-05-12 21:55:04,672 INFO: TimeOff Manager startup [in /Users/juhopark/workspace/leave-tracker/app.py:42]
+2025-05-12 21:55:07,533 INFO: TimeOff Manager startup [in /Users/juhopark/workspace/leave-tracker/app.py:42]
+2025-05-12 21:57:31,662 INFO: TimeOff Manager startup [in /Users/juhopark/workspace/leave-tracker/app.py:42]
+2025-05-12 21:57:33,530 INFO: TimeOff Manager startup [in /Users/juhopark/workspace/leave-tracker/app.py:42]
+2025-05-12 21:59:06,206 INFO: TimeOff Manager startup [in /Users/juhopark/workspace/leave-tracker/app.py:42]
+2025-05-12 21:59:08,047 INFO: TimeOff Manager startup [in /Users/juhopark/workspace/leave-tracker/app.py:42]
+2025-05-12 22:00:27,627 INFO: TimeOff Manager startup [in /Users/juhopark/workspace/leave-tracker/app.py:42]
+2025-05-12 22:00:36,655 INFO: TimeOff Manager startup [in /Users/juhopark/workspace/leave-tracker/app.py:42]
