@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_file
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_file, g
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta
 import bcrypt
@@ -24,7 +24,7 @@ app = Flask(__name__)
 app.secret_key = os.urandom(24)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///work_manager.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 db = SQLAlchemy(app)
@@ -48,13 +48,29 @@ def get_kst_now():
     return datetime.now(KST)
 
 def format_kst_datetime(dt):
+    """datetime 객체를 KST 기준 문자열로 변환"""
+    if dt is None:
+        return ''
     if dt.tzinfo is None:
         dt = KST.localize(dt)
     return dt.strftime('%Y-%m-%d %H:%M:%S')
 
 def format_date(dt):
     """datetime 객체를 'YYYY-MM-DD' 문자열로 변환"""
+    if dt is None:
+        return ''
+    if isinstance(dt, str):
+        return dt
     return dt.strftime('%Y-%m-%d')
+
+def parse_date(date_str):
+    """문자열을 datetime 객체로 변환"""
+    if isinstance(date_str, datetime):
+        return date_str
+    try:
+        return datetime.strptime(date_str, '%Y-%m-%d')
+    except (ValueError, TypeError):
+        return None
 
 # CSRF 보호를 위한 토큰 생성
 def generate_csrf_token():
@@ -89,7 +105,9 @@ def csrf_protect(f):
 @app.before_request
 def before_request():
     session.permanent = True
+    g.user = None
     if 'user_id' in session:
+        g.user = Employee.query.get(session['user_id'])
         # 세션 하이재킹 방지
         if 'user_agent' not in session:
             session['user_agent'] = request.headers.get('User-Agent')
@@ -122,14 +140,13 @@ class Employee(db.Model):
     name = db.Column(db.String(50), nullable=False)
     department = db.Column(db.String(50))
     position = db.Column(db.String(50))
-    join_date = db.Column(db.String(20))
+    join_date = db.Column(db.DateTime, nullable=False)
     annual_leave = db.Column(db.Integer, default=15)
-    used_leave = db.Column(db.Float, default=0)  # 사용 연차
-    remaining_leave = db.Column(db.Float, default=15)  # 잔여 연차
-    # 로그인용
+    used_leave = db.Column(db.Float, default=0)
+    remaining_leave = db.Column(db.Float, default=15)
     user_id = db.Column(db.String(50), unique=True)
     user_pw_hash = db.Column(db.LargeBinary(128))
-    role = db.Column(db.String(10), default='user')  # 'admin' or 'user'
+    role = db.Column(db.String(10), default='user')
     leave_requests = db.relationship(
         'LeaveRequest',
         backref='employee',
@@ -144,21 +161,19 @@ class Employee(db.Model):
 
 class LeaveRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    # 신청자(로그인한 사용자)
     applicant_id = db.Column(db.Integer, db.ForeignKey('employee.id', ondelete='SET NULL'))
-    # 대상자(휴가/출장 대상)
     target_id = db.Column(db.Integer, db.ForeignKey('employee.id', ondelete='CASCADE'))
     type = db.Column(db.String(20))
-    start_date = db.Column(db.String(20))
-    end_date = db.Column(db.String(20))
+    start_date = db.Column(db.DateTime, nullable=False)
+    end_date = db.Column(db.DateTime, nullable=False)
     reason = db.Column(db.String(200))
     status = db.Column(db.String(20), default='pending')
-    created_at = db.Column(db.String(20))
-    processed_at = db.Column(db.String(20))  # 승인/거절 일시
-    leave_days = db.Column(db.Float, default=0)  # 신청 일수
+    created_at = db.Column(db.DateTime, default=lambda: get_kst_now())
+    processed_at = db.Column(db.DateTime)
+    leave_days = db.Column(db.Float, default=0)
     cancel_requested = db.Column(db.Boolean, default=False)
     cancel_reason = db.Column(db.String(200))
-    cancel_at = db.Column(db.String(20))
+    cancel_at = db.Column(db.DateTime)
 
 class SystemLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -179,38 +194,46 @@ class SystemLog(db.Model):
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        try:
-            user_id = request.form['user_id'].strip()
-            pw = request.form['password'].encode('utf-8')
+        user_id = request.form['user_id']
+        password = request.form['password']
+        
+        user = Employee.query.filter_by(user_id=user_id).first()
+        
+        if user and bcrypt.checkpw(password.encode('utf-8'), user.user_pw_hash):
+            session['user_id'] = user.id
+            session['role'] = user.role
             
-            if not user_id or not pw:
-                flash('아이디와 비밀번호를 입력해주세요.')
-                return render_template('login.html')
+            # 로그인 성공 로그 기록
+            log = SystemLog(
+                action='login',
+                employee_name=user.name,
+                details=f'User {user.name} logged in successfully'
+            )
+            db.session.add(log)
+            db.session.commit()
             
-            emp = Employee.query.filter_by(user_id=user_id).first()
-            if emp and emp.user_pw_hash and bcrypt.checkpw(pw, emp.user_pw_hash):
-                session['user_id'] = emp.id
-                session['user_name'] = emp.name
-                session['role'] = emp.role
-                session['user_agent'] = request.headers.get('User-Agent')
-                session['last_activity'] = get_kst_now().isoformat()
-                flash('로그인 성공!')
-                next_page = request.args.get('next')
-                if next_page:
-                    return redirect(url_for(next_page))
-                return redirect(url_for('leave'))
-            else:
-                flash('아이디 또는 비밀번호가 올바르지 않습니다.')
-        except Exception as e:
-            db.session.rollback()
-            app.logger.error(f'Login error: {str(e)}')
-            flash('로그인 처리 중 오류가 발생했습니다.')
+            flash('로그인되었습니다.', 'success')
+            return redirect(url_for('leave'))
+        else:
+            flash('아이디 또는 비밀번호가 올바르지 않습니다.', 'error')
+    
     return render_template('login.html')
 
 @app.route('/logout')
 def logout():
-    session.pop('user_id', None)
-    session.pop('user_name', None)
+    if 'user_id' in session:
+        user = Employee.query.get(session['user_id'])
+        # 로그아웃 로그 기록
+        log = SystemLog(
+            action='logout',
+            employee_name=user.name if user else '',
+            details=f'User logged out'
+        )
+        db.session.add(log)
+        db.session.commit()
+        
+        session.clear()
+    flash('로그아웃되었습니다.', 'success')
     return redirect(url_for('login'))
 
 @app.context_processor
@@ -231,39 +254,39 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# 공휴일 목록 (2024년)
-HOLIDAYS_2024 = [
-    '2024-01-01',  # 신정
-    '2024-02-09',  # 설날
-    '2024-02-10',  # 설날
-    '2024-02-11',  # 설날
-    '2024-02-12',  # 대체공휴일
-    '2024-03-01',  # 삼일절
-    '2024-04-10',  # 국회의원선거일
-    '2024-05-05',  # 어린이날
-    '2024-05-06',  # 대체공휴일
-    '2024-05-15',  # 부처님오신날
-    '2024-06-06',  # 현충일
-    '2024-08-15',  # 광복절
-    '2024-09-16',  # 추석
-    '2024-09-17',  # 추석
-    '2024-09-18',  # 추석
-    '2024-10-03',  # 개천절
-    '2024-10-09',  # 한글날
-    '2024-12-25',  # 성탄절
-]
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('user_id') or Employee.query.get(session['user_id']).role != 'admin':
+            flash('관리자 권한이 필요합니다.', 'error')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
-def is_holiday(date_str):
-    return date_str in HOLIDAYS_2024
+# 공휴일 관리를 위한 클래스 추가
+class Holiday(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.Date, nullable=False, unique=True)
+    name = db.Column(db.String(50), nullable=False)
+    year = db.Column(db.Integer, nullable=False)
 
-def count_weekdays(start, end):
-    days = 0
-    cur = start
-    while cur <= end:
-        if cur.weekday() < 5 and not is_holiday(cur.strftime('%Y-%m-%d')):
-            days += 1
-        cur += timedelta(days=1)
-    return days
+# 공휴일 체크 함수 수정
+def is_holiday(date):
+    if isinstance(date, str):
+        date = datetime.strptime(date, '%Y-%m-%d').date()
+    return Holiday.query.filter_by(date=date).first() is not None
+
+# 주말 체크 함수 추가
+def is_weekend(date):
+    if isinstance(date, str):
+        date = datetime.strptime(date, '%Y-%m-%d').date()
+    return date.weekday() >= 5  # 5: Saturday, 6: Sunday
+
+# 유효한 휴가 날짜인지 체크하는 함수 추가
+def is_valid_leave_date(date):
+    if isinstance(date, str):
+        date = datetime.strptime(date, '%Y-%m-%d').date()
+    return not (is_holiday(date) or is_weekend(date))
 
 @app.route('/', methods=['GET', 'POST'])
 @login_required
@@ -357,8 +380,8 @@ def leave():
                 overlap = LeaveRequest.query.filter(
                     LeaveRequest.target_id==employee_id,
                     LeaveRequest.status.in_(['pending','approved']),
-                    LeaveRequest.start_date<=end_date,
-                    LeaveRequest.end_date>=start_date
+                    LeaveRequest.start_date<=ed,
+                    LeaveRequest.end_date>=sd
                 ).first()
                 if overlap:
                     flash('동일 기간에 이미 신청된 휴가/반차/출장이 있습니다.')
@@ -378,8 +401,8 @@ def leave():
                     applicant_id=session['user_id'],
                     target_id=employee_id,
                     type=type,
-                    start_date=start_date,
-                    end_date=end_date,
+                    start_date=sd,
+                    end_date=ed,
                     reason=reason,
                     created_at=created_at,
                     leave_days=days
@@ -989,7 +1012,7 @@ translations = {
         'system_management': '시스템 관리',
         'employee_management': '직원 관리',
         'leave_request': '휴가 신청',
-        'leave_status': '휴가 현황',
+        'leave_status': '신청관리',
         'approval': '승인',
         'rejection': '거절',
         'cancel': '취소',
@@ -1019,15 +1042,15 @@ translations = {
         'confirm_password': '비밀번호 확인',
         'language': '언어',
         'korean': '한국어',
-        'english': '영어',
+        'english': 'English',
         'user_id': '아이디',
         'password': '비밀번호',
         'please_sign_in': '계속하려면 로그인하세요',
-        'contact_dev': '계정 등록 또는 비밀번호 문의는 개발팀장에게 연락하세요',
-        'half_morning_top': 'Half-day',
-        'half_morning_bottom': 'Morning',
-        'half_afternoon_top': 'Half-day',
-        'half_afternoon_bottom': 'Afternoon',
+        'contact_dev': '계정 등록 또는 비밀번호 문의는 아래 메일로 문의해주세요',
+        'half_morning_top': '반차',
+        'half_morning_bottom': '(오전)',
+        'half_afternoon_top': '반차',
+        'half_afternoon_bottom': '(오후)',
         'business_trip': '출장',
         'apply': '신청',
         'apply_now': '신청하기',
@@ -1206,23 +1229,249 @@ def inject_translations():
     lang = get_locale()
     return dict(t=translations[lang])
 
+@app.route('/leave/request', methods=['GET', 'POST'])
+@login_required
+def leave_request():
+    if request.method == 'POST':
+        try:
+            start_date = datetime.strptime(request.form['start_date'], '%Y-%m-%d')
+            end_date = datetime.strptime(request.form['end_date'], '%Y-%m-%d')
+            
+            # 날짜 유효성 검사
+            if start_date > end_date:
+                flash('종료일은 시작일보다 이후여야 합니다.', 'error')
+                return redirect(url_for('leave_request'))
+            
+            if start_date < get_kst_now().date():
+                flash('과거 날짜는 선택할 수 없습니다.', 'error')
+                return redirect(url_for('leave_request'))
+            
+            # 휴가 일수 계산
+            leave_days = 0
+            current_date = start_date
+            while current_date <= end_date:
+                if is_valid_leave_date(current_date):
+                    leave_days += 1
+                current_date += timedelta(days=1)
+            
+            if leave_days == 0:
+                flash('선택한 기간에 유효한 휴가 일수가 없습니다.', 'error')
+                return redirect(url_for('leave_request'))
+            
+            # 잔여 연차 확인
+            employee = Employee.query.get(session['user_id'])
+            if employee.remaining_leave < leave_days:
+                flash('잔여 연차가 부족합니다.', 'error')
+                return redirect(url_for('leave_request'))
+            
+            # 휴가 신청 생성
+            leave_request = LeaveRequest(
+                applicant_id=session['user_id'],
+                target_id=session['user_id'],
+                type=request.form['type'],
+                start_date=start_date,
+                end_date=end_date,
+                reason=request.form['reason'],
+                leave_days=leave_days
+            )
+            
+            db.session.add(leave_request)
+            db.session.commit()
+            
+            flash('휴가가 신청되었습니다.', 'success')
+            return redirect(url_for('leave_status'))
+            
+        except ValueError as e:
+            flash('날짜 형식이 올바르지 않습니다.', 'error')
+            return redirect(url_for('leave_request'))
+        except Exception as e:
+            db.session.rollback()
+            flash('휴가 신청 중 오류가 발생했습니다.', 'error')
+            return redirect(url_for('leave_request'))
+    
+    return render_template('leave_request.html')
+
+@app.route('/leave/approve/<int:request_id>', methods=['POST'])
+@login_required
+@admin_required
+def approve_leave(request_id):
+    try:
+        leave_request = LeaveRequest.query.get_or_404(request_id)
+        
+        if leave_request.status != 'pending':
+            flash('이미 처리된 휴가 신청입니다.', 'error')
+            return redirect(url_for('leave_status'))
+        
+        leave_request.status = 'approved'
+        leave_request.processed_at = get_kst_now()
+        
+        # 연차 사용량 업데이트
+        employee = Employee.query.get(leave_request.target_id)
+        employee.used_leave += leave_request.leave_days
+        employee.remaining_leave -= leave_request.leave_days
+        
+        db.session.commit()
+        flash('휴가가 승인되었습니다.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash('휴가 승인 중 오류가 발생했습니다.', 'error')
+    
+    return redirect(url_for('leave_status'))
+
+@app.route('/leave/reject/<int:request_id>', methods=['POST'])
+@login_required
+@admin_required
+def reject_leave(request_id):
+    try:
+        leave_request = LeaveRequest.query.get_or_404(request_id)
+        
+        if leave_request.status != 'pending':
+            flash('이미 처리된 휴가 신청입니다.', 'error')
+            return redirect(url_for('leave_status'))
+        
+        leave_request.status = 'rejected'
+        leave_request.processed_at = get_kst_now()
+        
+        db.session.commit()
+        flash('휴가가 거절되었습니다.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash('휴가 거절 중 오류가 발생했습니다.', 'error')
+    
+    return redirect(url_for('leave_status'))
+
+def count_weekdays(start, end):
+    """주말과 공휴일을 제외한 평일 수를 계산"""
+    days = 0
+    current = start
+    while current <= end:
+        if is_valid_leave_date(current):
+            days += 1
+        current += timedelta(days=1)
+    return days
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('user_id') or Employee.query.get(session['user_id']).role != 'admin':
+            flash('관리자 권한이 필요합니다.', 'error')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+        
+        # 기존 데이터 마이그레이션
+        try:
+            # Employee 모델의 join_date 마이그레이션
+            employees = Employee.query.all()
+            for emp in employees:
+                if isinstance(emp.join_date, str):
+                    emp.join_date = datetime.strptime(emp.join_date, '%Y-%m-%d')
+            
+            # LeaveRequest 모델의 날짜 필드 마이그레이션
+            requests = LeaveRequest.query.all()
+            for req in requests:
+                if isinstance(req.start_date, str):
+                    req.start_date = datetime.strptime(req.start_date, '%Y-%m-%d')
+                if isinstance(req.end_date, str):
+                    req.end_date = datetime.strptime(req.end_date, '%Y-%m-%d')
+                if isinstance(req.created_at, str):
+                    req.created_at = datetime.strptime(req.created_at, '%Y-%m-%d %H:%M:%S')
+                if isinstance(req.processed_at, str) and req.processed_at:
+                    req.processed_at = datetime.strptime(req.processed_at, '%Y-%m-%d %H:%M:%S')
+                if isinstance(req.cancel_at, str) and req.cancel_at:
+                    req.cancel_at = datetime.strptime(req.cancel_at, '%Y-%m-%d %H:%M:%S')
+            
+            db.session.commit()
+        except Exception as e:
+            app.logger.error(f'Migration error: {str(e)}')
+            db.session.rollback()
+        
+        # 공휴일 데이터 초기화
+        if Holiday.query.count() == 0:
+            holidays_2025 = [
+                ('2025-01-01', '신정'),
+                ('2025-01-28', '설날'),
+                ('2025-01-29', '설날'),
+                ('2025-01-30', '설날'),
+                ('2025-03-01', '삼일절'),
+                ('2025-05-05', '어린이날'),
+                ('2025-05-06', '대체공휴일'),
+                ('2025-05-15', '부처님오신날'),
+                ('2025-06-06', '현충일'),
+                ('2025-08-15', '광복절'),
+                ('2025-10-03', '개천절'),
+                ('2025-10-05', '추석'),
+                ('2025-10-06', '추석'),
+                ('2025-10-07', '추석'),
+                ('2025-10-09', '한글날'),
+                ('2025-12-25', '성탄절')
+            ]
+            
+            for date_str, name in holidays_2025:
+                date = datetime.strptime(date_str, '%Y-%m-%d').date()
+                holiday = Holiday(date=date, name=name, year=2025)
+                db.session.add(holiday)
+            
+            db.session.commit()
+        
         # 가상 직원 3명 자동 추가 (중복 방지)
         if Employee.query.count() == 0:
-            db.session.add(Employee(name='Juho', department='Dev team 1', position='차장', join_date='2023-01-01', annual_leave=15, used_leave=0, remaining_leave=15))
-            db.session.add(Employee(name='Yeseul', department='Dev team 1', position='대리', join_date='2022-03-15', annual_leave=15, used_leave=0, remaining_leave=15))
-            db.session.add(Employee(name='Erdem', department='Dev team 1', position='사원', join_date='2021-07-10', annual_leave=15, used_leave=0, remaining_leave=15))
+            db.session.add(Employee(
+                name='Juho',
+                department='Dev team 1',
+                position='차장',
+                join_date=datetime.strptime('2023-01-01', '%Y-%m-%d'),
+                annual_leave=15,
+                used_leave=0,
+                remaining_leave=15
+            ))
+            db.session.add(Employee(
+                name='Yeseul',
+                department='Dev team 1',
+                position='대리',
+                join_date=datetime.strptime('2022-03-15', '%Y-%m-%d'),
+                annual_leave=15,
+                used_leave=0,
+                remaining_leave=15
+            ))
+            db.session.add(Employee(
+                name='Erdem',
+                department='Dev team 1',
+                position='사원',
+                join_date=datetime.strptime('2021-07-10', '%Y-%m-%d'),
+                annual_leave=15,
+                used_leave=0,
+                remaining_leave=15
+            ))
             db.session.commit()
+        
         # 비밀번호가 없으면 0000으로 초기화
         if AdminPassword.query.count() == 0:
             pw_hash = bcrypt.hashpw('0000'.encode('utf-8'), bcrypt.gensalt())
             db.session.add(AdminPassword(pw_hash=pw_hash))
             db.session.commit()
+        
         # 마스터 계정(admin/admin) 자동 생성
         if Employee.query.filter_by(user_id='admin').first() is None:
             pw_hash = bcrypt.hashpw('admin'.encode('utf-8'), bcrypt.gensalt())
-            db.session.add(Employee(name='관리자', department='관리', position='관리자', join_date='2020-01-01', annual_leave=99, used_leave=0, remaining_leave=99, user_id='admin', user_pw_hash=pw_hash, role='admin'))
+            db.session.add(Employee(
+                name='관리자',
+                department='관리',
+                position='관리자',
+                join_date=datetime.strptime('2020-01-01', '%Y-%m-%d'),
+                annual_leave=99,
+                used_leave=0,
+                remaining_leave=99,
+                user_id='admin',
+                user_pw_hash=pw_hash,
+                role='admin'
+            ))
             db.session.commit()
+    
     app.run(debug=True)
