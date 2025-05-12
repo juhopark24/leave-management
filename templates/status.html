@@ -2,11 +2,17 @@
 {% block content %}
 <div class="container py-4">
   <div class="card shadow-sm">
-    <div class="card-header bg-white py-3">
-      <h5 class="card-title mb-0">
-        <i class="fas fa-tasks me-2"></i>
-        신청 관리
-      </h5>
+    <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between border-bottom">
+      <div class="d-flex align-items-center">
+        <i class="fas fa-tasks me-2 text-primary"></i>
+        <h5 class="card-title mb-0 fw-bold">{{ t['status'] }}</h5>
+      </div>
+      <div class="header-actions">
+        <span class="badge bg-light text-dark border">
+          <i class="fas fa-clock me-1"></i>
+          {{ t['real_time'] }}
+        </span>
+      </div>
     </div>
     <div class="card-body p-0">
       <div class="table-responsive">
@@ -26,7 +32,7 @@
           </thead>
           <tbody>
             {% for req, emp in requests %}
-            <tr>
+            <tr class="request-main-row">
               <td class="align-middle">{{ req.created_at }}</td>
               <td class="align-middle">{{ emp.name }}</td>
               <td class="align-middle">
@@ -42,37 +48,20 @@
               </td>
               <td class="align-middle">{{ req.start_date }}</td>
               <td class="align-middle">{{ req.end_date }}</td>
-              <td class="align-middle" style="max-width: 200px; word-break: break-all;">{{ req.reason }}</td>
               <td class="align-middle text-center">
                 {% if req.status == 'pending' %}
-                  <div>
-                    <span class="badge bg-warning text-dark" style="font-size:1em;">{{ t['pending'] }}</span>
-                  </div>
+                  <span class="badge bg-warning text-dark" style="font-size:1em;">{{ t['pending'] }}</span>
                 {% elif req.status == 'approved' %}
-                  <div>
-                    <span class="badge bg-success" style="font-size:1em;">{{ t['approved'] }}</span><br>
-                    {% if req.processed_at %}
-                      <span style="font-size:0.85em; color:#888;">{{ req.processed_at }}</span>
-                    {% endif %}
-                  </div>
+                  <span class="badge bg-success" style="font-size:1em;">{{ t['approved'] }}</span>
+                  {% if req.processed_at %}<br><span style="font-size:0.85em; color:#888;">{{ req.processed_at }}</span>{% endif %}
                 {% elif req.status == 'rejected' %}
-                  <div>
-                    <span class="badge bg-danger" style="font-size:1em;">{{ t['rejected'] }}</span><br>
-                    {% if req.processed_at %}
-                      <span style="font-size:0.85em; color:#888;">{{ req.processed_at }}</span>
-                    {% endif %}
-                  </div>
+                  <span class="badge bg-danger" style="font-size:1em;">{{ t['rejected'] }}</span>
+                  {% if req.processed_at %}<br><span style="font-size:0.85em; color:#888;">{{ req.processed_at }}</span>{% endif %}
                 {% elif req.status == 'cancel_pending' %}
-                  <div>
-                    <span class="badge bg-secondary" style="font-size:1em;">{{ t['cancel_pending'] }}</span>
-                  </div>
+                  <span class="badge bg-secondary" style="font-size:1em;">{{ t['cancel_pending'] }}</span>
                 {% elif req.status == 'cancelled' %}
-                  <div>
-                    <span class="badge bg-dark" style="font-size:1em;">{{ t['cancelled'] }}</span><br>
-                    {% if req.processed_at %}
-                      <span style="font-size:0.85em; color:#888;">{{ req.processed_at }}</span>
-                    {% endif %}
-                  </div>
+                  <span class="badge bg-dark" style="font-size:1em;">{{ t['cancelled'] }}</span>
+                  {% if req.processed_at %}<br><span style="font-size:0.85em; color:#888;">{{ req.processed_at }}</span>{% endif %}
                 {% endif %}
               </td>
               <td class="align-middle">
@@ -110,11 +99,16 @@
               </td>
               <td class="align-middle">
                 {% if req.status == 'approved' %}
-                  <a href="/download_approval/{{ req.id }}" class="btn btn-sm btn-outline-primary">
+                  <a href="/download_approval/{{ req.id }}" class="btn btn-sm btn-outline-primary pdf-download-btn" style="min-width:120px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:inline-block;">
                     <i class="fas fa-file-pdf me-1"></i>
                     {{ t['pdf'] }}
                   </a>
                 {% endif %}
+              </td>
+            </tr>
+            <tr class="request-reason-row">
+              <td colspan="9" class="bg-light text-secondary small p-3" style="border-top:0; border-bottom:2px solid #e9ecef; word-break:break-all;">
+                <strong>{{ t['reason'] }}:</strong> {{ req.reason }}
               </td>
             </tr>
             {% endfor %}
@@ -124,4 +118,46 @@
     </div>
   </div>
 </div>
+<style>
+  .pdf-download-btn {
+    min-width: 120px;
+    max-width: 180px;
+    font-size: 1em;
+    padding: 6px 16px;
+    border-radius: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+    margin: 0 auto;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .table td, .table th {
+    vertical-align: middle !important;
+    padding-top: 12px !important;
+    padding-bottom: 12px !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    word-break: break-all;
+    font-size: 1em;
+    line-height: 1.5;
+  }
+  .table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    font-size: 1.05em;
+  }
+  .request-main-row {
+    border-bottom: 0 !important;
+  }
+  .request-reason-row td {
+    border-top: 0 !important;
+    border-bottom: 2px solid #e9ecef !important;
+    background: #f8f9fa !important;
+    color: #495057 !important;
+    font-size: 0.98em;
+    line-height: 1.7;
+    letter-spacing: 0.01em;
+  }
+</style>
 {% endblock %} 
