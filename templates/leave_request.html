@@ -2,20 +2,7 @@
 
 {% block content %}
 <div class="container py-4">
-    <!-- 알림 메시지 -->
-    {% with messages = get_flashed_messages() %}
-    {% if messages %}
-    <div class="alert alert-info alert-dismissible fade show mb-4" role="alert" style="font-size: 1.1rem; padding: 1rem 1.5rem;">
-        {% for message in messages %}
-        <div class="d-flex align-items-center">
-            <i class="fas fa-info-circle me-2"></i>
-            <div>{{ message }}</div>
-        </div>
-        {% endfor %}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    {% endif %}
-    {% endwith %}
+    <!-- 알림 메시지 제거됨 -->
 
     <div class="row">
         <!-- 신청 폼 -->
@@ -130,7 +117,7 @@
                     <div id="leaveStatus">
                         <div class="text-center text-muted py-4">
                             <i class="fas fa-user-circle fa-3x mb-3"></i>
-                            <p class="mb-0">직원을 선택하면 휴가 현황이 표시됩니다.</p>
+                            <p class="mb-0">{{ t['select_employee_guide'] }}</p>
                         </div>
                     </div>
                 </div>
@@ -276,7 +263,7 @@ document.addEventListener('DOMContentLoaded', function() {
             leaveStatusDiv.innerHTML = `
                 <div class="text-center text-muted py-4">
                     <i class="fas fa-user-circle fa-3x mb-3"></i>
-                    <p class="mb-0">직원을 선택하면 휴가 현황이 표시됩니다.</p>
+                    <p class="mb-0">{{ t['select_employee_guide'] }}</p>
                 </div>
             `;
             return;
