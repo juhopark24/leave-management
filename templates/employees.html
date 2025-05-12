@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>직원 관리</h2>
+<form method="post" class="row g-3 mb-3">
+  <div class="col-auto"><input name="name" class="form-control" placeholder="이름" required></div>
+  <div class="col-auto"><input name="department" class="form-control" placeholder="부서"></div>
+  <div class="col-auto"><input name="position" class="form-control" placeholder="직급"></div>
+  <div class="col-auto"><button class="btn btn-primary" type="submit">추가</button></div>
+</form>
+<table class="table mt-3">
+  <thead><tr><th>이름</th><th>부서</th><th>직급</th><th>입사일</th></tr></thead>
+  <tbody>
+    {% for emp in employees %}
+    <tr><td>{{ emp.name }}</td><td>{{ emp.department }}</td><td>{{ emp.position }}</td><td>{{ emp.join_date }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+<hr>
+<div class="mt-4">
+  <h5>비밀번호 변경</h5>
+  <form method="post" action="/change_password" class="row g-2 align-items-center">
+    <div class="col-auto"><input name="new_password" type="password" class="form-control" placeholder="새 비밀번호" required></div>
+    <div class="col-auto"><button class="btn btn-secondary" type="submit">변경</button></div>
+  </form>
+</div>
+{% endblock %} 

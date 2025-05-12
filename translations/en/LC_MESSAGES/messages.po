@@ -1,0 +1,138 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: leave-tracker\n"
+"POT-Creation-Date: 2024-05-11 21:45+0900\n"
+"PO-Revision-Date: 2024-05-11 21:45+0900\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Login"
+msgstr "Login"
+
+msgid "Logout"
+msgstr "Logout"
+
+msgid "Leave Management"
+msgstr "Leave Management"
+
+msgid "System Management"
+msgstr "System Management"
+
+msgid "Employee Management"
+msgstr "Employee Management"
+
+msgid "Leave Request"
+msgstr "Leave Request"
+
+msgid "Leave Status"
+msgstr "Leave Status"
+
+msgid "Approval"
+msgstr "Approval"
+
+msgid "Rejection"
+msgstr "Rejection"
+
+msgid "Cancel"
+msgstr "Cancel"
+
+msgid "Submit"
+msgstr "Submit"
+
+msgid "Edit"
+msgstr "Edit"
+
+msgid "Delete"
+msgstr "Delete"
+
+msgid "Name"
+msgstr "Name"
+
+msgid "Department"
+msgstr "Department"
+
+msgid "Position"
+msgstr "Position"
+
+msgid "Join Date"
+msgstr "Join Date"
+
+msgid "Annual Leave"
+msgstr "Annual Leave"
+
+msgid "Used Leave"
+msgstr "Used Leave"
+
+msgid "Remaining Leave"
+msgstr "Remaining Leave"
+
+msgid "Start Date"
+msgstr "Start Date"
+
+msgid "End Date"
+msgstr "End Date"
+
+msgid "Reason"
+msgstr "Reason"
+
+msgid "Status"
+msgstr "Status"
+
+msgid "Created At"
+msgstr "Created At"
+
+msgid "Processed At"
+msgstr "Processed At"
+
+msgid "Leave Days"
+msgstr "Leave Days"
+
+msgid "Cancel Request"
+msgstr "Cancel Request"
+
+msgid "Cancel Reason"
+msgstr "Cancel Reason"
+
+msgid "Cancel At"
+msgstr "Cancel At"
+
+msgid "Change Password"
+msgstr "Change Password"
+
+msgid "Current Password"
+msgstr "Current Password"
+
+msgid "New Password"
+msgstr "New Password"
+
+msgid "Confirm Password"
+msgstr "Confirm Password"
+
+msgid "Language"
+msgstr "Language"
+
+msgid "Korean"
+msgstr "Korean"
+
+msgid "English"
+msgstr "English"
+
+msgid "User ID"
+msgstr "User ID"
+
+msgid "Password"
+msgstr "Password"
+
+msgid "Please sign in to continue"
+msgstr "Please sign in to continue"
+
+msgid "For account registration or password assistance,"
+msgstr "For account registration or password assistance,"
+
+msgid "please contact the Development Team Lead"
+msgstr "please contact the Development Team Lead" 
