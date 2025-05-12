@@ -881,84 +881,110 @@ def download_approval(req_id):
     req = LeaveRequest.query.get(req_id)
     emp = Employee.query.get(req.target_id)
     
-    # PDF 생성
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=50, leftMargin=50, topMargin=70, bottomMargin=50)
     styles = getSampleStyleSheet()
     
-    # 한글 폰트 등록
+    # 폰트 등록 (정확한 이름)
     pdfmetrics.registerFont(TTFont('NanumGothic', 'static/fonts/NanumGothic-Regular.ttf'))
+    pdfmetrics.registerFont(TTFont('NanumGothic-Bold', 'static/fonts/NanumGothic-Bold.ttf'))
+    pdfmetrics.registerFont(TTFont('RobotoCondensed', 'static/fonts/Roboto_Condensed-Regular.ttf'))
+    pdfmetrics.registerFont(TTFont('RobotoCondensed-Bold', 'static/fonts/Roboto_Condensed-Bold.ttf'))
+    pdfmetrics.registerFont(TTFont('RobotoCondensed-Light', 'static/fonts/Roboto_Condensed-Light.ttf'))
+    pdfmetrics.registerFont(TTFont('RobotoCondensed-Medium', 'static/fonts/Roboto_Condensed-Medium.ttf'))
+    pdfmetrics.registerFont(TTFont('RobotoCondensed-Thin', 'static/fonts/Roboto_Condensed-Thin.ttf'))
+    pdfmetrics.registerFont(TTFont('RobotoCondensed-Italic', 'static/fonts/Roboto_Condensed-Italic.ttf'))
     
-    # 내용 구성 (한글/영어 모두 지원)
-    elements = []
-    
-    # 제목
+    # 스타일 정의 (정확한 폰트명 사용)
     title_style = ParagraphStyle(
-        'CustomTitle',
-        parent=styles['Normal'],
-        fontName='NanumGothic',
-        fontSize=20,
-        spaceAfter=30,
-        alignment=1
+        'Title', parent=styles['Normal'], fontName='RobotoCondensed-Bold', fontSize=26, alignment=1, spaceAfter=28, leading=32
     )
-    elements.append(Paragraph('휴가 신청서 / Leave Application', title_style))
-    elements.append(Spacer(1, 20))
+    label_style = ParagraphStyle(
+        'Label', parent=styles['Normal'], fontName='RobotoCondensed-Bold', fontSize=13, alignment=1, leading=18
+    )
+    value_style_en = ParagraphStyle(
+        'ValueEN', parent=styles['Normal'], fontName='RobotoCondensed', fontSize=13, alignment=1, leading=18, wordWrap='CJK'
+    )
+    value_style_ko = ParagraphStyle(
+        'ValueKO', parent=styles['Normal'], fontName='NanumGothic', fontSize=13, alignment=1, leading=18, wordWrap='CJK'
+    )
+    sign_label_style = ParagraphStyle(
+        'SignLabel', parent=styles['Normal'], fontName='RobotoCondensed-Bold', fontSize=12, alignment=0, leading=16
+    )
+    sign_value_style = ParagraphStyle(
+        'SignValue', parent=styles['Normal'], fontName='NanumGothic', fontSize=12, alignment=0, leading=16
+    )
     
-    # 기본 정보 (한글/영어 병기 예시)
-    info_data = [
-        ['이름(Name)', emp.name],
-        ['부서(Department)', emp.department],
-        ['직급(Position)', emp.position],
-        ['유형(Type)', req.type],
-        ['시작일(Start Date)', req.start_date],
-        ['종료일(End Date)', req.end_date],
-        ['신청일(Requested At)', req.created_at],
-        ['사유(Reason)', req.reason]
+    # None/빈값 처리
+    type_val = req.type if req.type else 'N/A'
+    reason_val = req.reason if req.reason else 'N/A'
+    
+    elements = []
+    # 제목
+    elements.append(Paragraph('Leave Application Form', title_style))
+    elements.append(Spacer(1, 18))
+    
+    # 날짜 표기 로직
+    start_str = req.start_date.strftime('%Y.%m.%d')
+    end_str = req.end_date.strftime('%Y.%m.%d')
+    if req.start_date.date() == req.end_date.date():
+        date_display = f"{start_str} ({req.start_date.strftime('%a')})"
+    else:
+        total_days = int(req.leave_days) if req.leave_days == int(req.leave_days) else req.leave_days
+        date_display = f"{start_str} ~<br/>{end_str} (total {total_days} days)"
+    
+    # 표 데이터 (항목은 영어, 값은 한글/영어)
+    table_data = [
+        [Paragraph('Name', label_style), Paragraph(emp.name, value_style_ko), Paragraph('Position', label_style), Paragraph(emp.position, value_style_ko)],
+        [Paragraph('Department', label_style), Paragraph(emp.department, value_style_ko), '', ''],
+        [Paragraph('Date', label_style), Paragraph(date_display, value_style_en), Paragraph('Type', label_style), Paragraph(type_val, value_style_en)],
+        [Paragraph('Reason', label_style), Paragraph(reason_val, value_style_en), '', '']
     ]
-    
-    # 승인 정보가 있는 경우 추가
-    if req.processed_at:
-        info_data.extend([
-            ['승인자(Approver)', '관리자(Admin)'],
-            ['승인일(Approved At)', req.processed_at],
-            ['상태(Status)', req.status.capitalize()]
-        ])
-    
-    # 테이블 생성
-    info_table = Table(info_data, colWidths=[140, 360])
-    info_table.setStyle(TableStyle([
-        ('FONTSIZE', (0, 0), (-1, -1), 12),
-        ('FONTNAME', (0, 0), (-1, -1), 'NanumGothic'),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
+    table = Table(table_data, colWidths=[80, 170, 80, 170], hAlign='CENTER')
+    table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), 'RobotoCondensed'),
+        ('FONTSIZE', (0, 0), (-1, -1), 13),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('PADDING', (0, 0), (-1, -1), 10),
+        ('GRID', (0, 0), (-1, -1), 0.8, colors.black),
+        ('SPAN', (1, 1), (3, 1)),  # 부서 행 병합
+        ('SPAN', (1, 3), (3, 3)),  # Reason 행 병합
+        ('BACKGROUND', (0, 0), (-1, 0), colors.whitesmoke),
+        ('BACKGROUND', (0, 1), (-1, 1), colors.whitesmoke),
+        ('BACKGROUND', (0, 2), (-1, 2), colors.whitesmoke),
+        ('BACKGROUND', (0, 3), (-1, 3), colors.whitesmoke),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
     ]))
+    elements.append(table)
+    elements.append(Spacer(1, 50))
     
-    elements.append(info_table)
-    elements.append(Spacer(1, 30))
+    # 하단 서명란 (영어)
+    sign_table_data = [
+        [Paragraph('Date', sign_label_style), Paragraph(req.created_at.strftime('%Y-%m-%d'), sign_value_style), '', ''],
+        [Paragraph('Applicant', sign_label_style), Paragraph(emp.name, sign_value_style), Paragraph('Signature', sign_label_style), '________________']
+    ]
+    sign_table = Table(sign_table_data, colWidths=[70, 150, 70, 170], hAlign='LEFT')
+    sign_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), 'RobotoCondensed'),
+        ('FONTSIZE', (0, 0), (-1, -1), 12),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ('SPAN', (1, 0), (3, 0)),
+    ]))
+    elements.append(sign_table)
     
-    # 서명란 (한글/영어)
-    signature_style = ParagraphStyle(
-        'Signature',
-        parent=styles['Normal'],
-        fontName='NanumGothic',
-        fontSize=12,
-        alignment=1
-    )
-    elements.append(Paragraph('신청자 서명 / Applicant Signature: _________________', signature_style))
-    elements.append(Spacer(1, 10))
-    elements.append(Paragraph('승인자 서명 / Approver Signature: _________________', signature_style))
-    
-    # PDF 생성
     doc.build(elements)
     buffer.seek(0)
     
     return send_file(
         buffer,
         as_attachment=True,
-        download_name=f'leave_application_{req.id}.pdf',
+        download_name=f'leave_form_{req.id}.pdf',
         mimetype='application/pdf'
     )
 
@@ -1387,33 +1413,14 @@ if __name__ == '__main__':
             app.logger.error(f'Migration error: {str(e)}')
             db.session.rollback()
         
-        # 공휴일 데이터 초기화
-        if Holiday.query.count() == 0:
-            holidays_2025 = [
-                ('2025-01-01', '신정'),
-                ('2025-01-28', '설날'),
-                ('2025-01-29', '설날'),
-                ('2025-01-30', '설날'),
-                ('2025-03-01', '삼일절'),
-                ('2025-05-05', '어린이날'),
-                ('2025-05-06', '대체공휴일'),
-                ('2025-05-15', '부처님오신날'),
-                ('2025-06-06', '현충일'),
-                ('2025-08-15', '광복절'),
-                ('2025-10-03', '개천절'),
-                ('2025-10-05', '추석'),
-                ('2025-10-06', '추석'),
-                ('2025-10-07', '추석'),
-                ('2025-10-09', '한글날'),
-                ('2025-12-25', '성탄절')
-            ]
-            
-            for date_str, name in holidays_2025:
-                date = datetime.strptime(date_str, '%Y-%m-%d').date()
-                holiday = Holiday(date=date, name=name, year=2025)
-                db.session.add(holiday)
-            
-            db.session.commit()
+        # 공휴일 데이터 초기화 코드 완전 주석 처리
+        # if Holiday.query.count() == 0:
+        #     holidays_2025 = [ ... ]
+        #     for date_str, name in holidays_2025:
+        #         date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        #         holiday = Holiday(date=date, name=name, year=2025)
+        #         db.session.add(holiday)
+        #     db.session.commit()
         
         # 가상 직원 3명 자동 추가 (중복 방지)
         if Employee.query.count() == 0:
