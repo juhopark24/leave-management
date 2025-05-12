@@ -886,7 +886,7 @@ def download_approval(req_id):
     doc = SimpleDocTemplate(buffer, pagesize=A4)
     styles = getSampleStyleSheet()
     
-    # 내용 구성
+    # 내용 구성 (영어로만)
     elements = []
     
     # 제목
@@ -897,27 +897,27 @@ def download_approval(req_id):
         spaceAfter=30,
         alignment=1
     )
-    elements.append(Paragraph('휴가 신청서', title_style))
+    elements.append(Paragraph('Leave Application', title_style))
     elements.append(Spacer(1, 20))
     
-    # 기본 정보
+    # 기본 정보 (영어)
     info_data = [
-        ['신청자', emp.name],
-        ['부서', emp.department],
-        ['직급', emp.position],
-        ['신청 유형', req.type],
-        ['시작일', req.start_date],
-        ['종료일', req.end_date],
-        ['신청일시', req.created_at],
-        ['사유', req.reason]
+        ['Name', emp.name],
+        ['Department', emp.department],
+        ['Position', emp.position],
+        ['Type', req.type],
+        ['Start Date', req.start_date],
+        ['End Date', req.end_date],
+        ['Requested At', req.created_at],
+        ['Reason', req.reason]
     ]
     
-    # 승인 정보가 있는 경우 추가
+    # 승인 정보가 있는 경우 추가 (영어)
     if req.processed_at:
         info_data.extend([
-            ['승인자', '관리자'],
-            ['승인일시', req.processed_at],
-            ['상태', '승인']
+            ['Approver', 'Admin'],
+            ['Approved At', req.processed_at],
+            ['Status', req.status.capitalize()]
         ])
     
     # 테이블 생성
@@ -934,16 +934,16 @@ def download_approval(req_id):
     elements.append(info_table)
     elements.append(Spacer(1, 30))
     
-    # 서명란
+    # 서명란 (영어)
     signature_style = ParagraphStyle(
         'Signature',
         parent=styles['Normal'],
         fontSize=12,
         alignment=1
     )
-    elements.append(Paragraph('신청자 서명: _________________', signature_style))
+    elements.append(Paragraph('Applicant Signature: _________________', signature_style))
     elements.append(Spacer(1, 10))
-    elements.append(Paragraph('승인자 서명: _________________', signature_style))
+    elements.append(Paragraph('Approver Signature: _________________', signature_style))
     
     # PDF 생성
     doc.build(elements)
@@ -952,7 +952,7 @@ def download_approval(req_id):
     return send_file(
         buffer,
         as_attachment=True,
-        download_name=f'휴가신청서_{req.id}.pdf',
+        download_name=f'leave_application_{req.id}.pdf',
         mimetype='application/pdf'
     )
 
