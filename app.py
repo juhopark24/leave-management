@@ -902,9 +902,6 @@ def download_approval(req_id):
     label_style = ParagraphStyle(
         'Label', parent=styles['Normal'], fontName='RobotoCondensed-Bold', fontSize=13, alignment=1, leading=18
     )
-    value_style_en = ParagraphStyle(
-        'ValueEN', parent=styles['Normal'], fontName='RobotoCondensed', fontSize=13, alignment=1, leading=18, wordWrap='CJK'
-    )
     value_style_ko = ParagraphStyle(
         'ValueKO', parent=styles['Normal'], fontName='NanumGothic', fontSize=13, alignment=1, leading=18, wordWrap='CJK'
     )
@@ -916,7 +913,7 @@ def download_approval(req_id):
     )
     
     # None/빈값 처리
-    type_val = req.type if req.type else 'N/A'
+    type_val = req.type if hasattr(req, 'type') and req.type else getattr(req, 'leave_type', 'N/A')
     reason_val = req.reason if req.reason else 'N/A'
     
     elements = []
@@ -933,12 +930,12 @@ def download_approval(req_id):
         total_days = int(req.leave_days) if req.leave_days == int(req.leave_days) else req.leave_days
         date_display = f"{start_str} ~<br/>{end_str} (total {total_days} days)"
     
-    # 표 데이터 (항목은 영어, 값은 한글/영어)
+    # 표 데이터 (항목은 영어, 값은 모두 NanumGothic)
     table_data = [
         [Paragraph('Name', label_style), Paragraph(emp.name, value_style_ko), Paragraph('Position', label_style), Paragraph(emp.position, value_style_ko)],
         [Paragraph('Department', label_style), Paragraph(emp.department, value_style_ko), '', ''],
-        [Paragraph('Date', label_style), Paragraph(date_display, value_style_en), Paragraph('Type', label_style), Paragraph(type_val, value_style_en)],
-        [Paragraph('Reason', label_style), Paragraph(reason_val, value_style_en), '', '']
+        [Paragraph('Date', label_style), Paragraph(date_display, value_style_ko), Paragraph('Type', label_style), Paragraph(type_val, value_style_ko)],
+        [Paragraph('Reason', label_style), Paragraph(reason_val, value_style_ko), '', '']
     ]
     table = Table(table_data, colWidths=[80, 170, 80, 170], hAlign='CENTER')
     table.setStyle(TableStyle([
@@ -978,13 +975,17 @@ def download_approval(req_id):
     ]))
     elements.append(sign_table)
     
+    # 파일명: leave_request_yyyymmdd.pdf (신청일 기준)
+    file_date = req.created_at.strftime('%Y%m%d')
+    filename = f'leave_request_{file_date}.pdf'
+    
     doc.build(elements)
     buffer.seek(0)
     
     return send_file(
         buffer,
         as_attachment=True,
-        download_name=f'leave_form_{req.id}.pdf',
+        download_name=filename,
         mimetype='application/pdf'
     )
 
