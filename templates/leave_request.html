@@ -218,6 +218,11 @@
                                         onclick="showCancelModal('{{ request.id }}')">
                                     <i class="fas fa-times"></i> {{ t['cancel'] }}
                                 </button>
+                                {% elif request.status == 'approved' and session.get('user_id') == request.applicant_id %}
+                                <button class="btn btn-sm btn-outline-danger" 
+                                        onclick="showCancelModal('{{ request.id }}')">
+                                    <i class="fas fa-times"></i> {{ t['cancel'] }}
+                                </button>
                                 {% endif %}
                             </td>
                         </tr>
