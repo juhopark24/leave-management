@@ -886,44 +886,49 @@ def download_approval(req_id):
     doc = SimpleDocTemplate(buffer, pagesize=A4)
     styles = getSampleStyleSheet()
     
-    # 내용 구성 (영어로만)
+    # 한글 폰트 등록
+    pdfmetrics.registerFont(TTFont('NanumGothic', 'static/fonts/NanumGothic-Regular.ttf'))
+    
+    # 내용 구성 (한글/영어 모두 지원)
     elements = []
     
     # 제목
     title_style = ParagraphStyle(
         'CustomTitle',
         parent=styles['Normal'],
+        fontName='NanumGothic',
         fontSize=20,
         spaceAfter=30,
         alignment=1
     )
-    elements.append(Paragraph('Leave Application', title_style))
+    elements.append(Paragraph('휴가 신청서 / Leave Application', title_style))
     elements.append(Spacer(1, 20))
     
-    # 기본 정보 (영어)
+    # 기본 정보 (한글/영어 병기 예시)
     info_data = [
-        ['Name', emp.name],
-        ['Department', emp.department],
-        ['Position', emp.position],
-        ['Type', req.type],
-        ['Start Date', req.start_date],
-        ['End Date', req.end_date],
-        ['Requested At', req.created_at],
-        ['Reason', req.reason]
+        ['이름(Name)', emp.name],
+        ['부서(Department)', emp.department],
+        ['직급(Position)', emp.position],
+        ['유형(Type)', req.type],
+        ['시작일(Start Date)', req.start_date],
+        ['종료일(End Date)', req.end_date],
+        ['신청일(Requested At)', req.created_at],
+        ['사유(Reason)', req.reason]
     ]
     
-    # 승인 정보가 있는 경우 추가 (영어)
+    # 승인 정보가 있는 경우 추가
     if req.processed_at:
         info_data.extend([
-            ['Approver', 'Admin'],
-            ['Approved At', req.processed_at],
-            ['Status', req.status.capitalize()]
+            ['승인자(Approver)', '관리자(Admin)'],
+            ['승인일(Approved At)', req.processed_at],
+            ['상태(Status)', req.status.capitalize()]
         ])
     
     # 테이블 생성
-    info_table = Table(info_data, colWidths=[100, 400])
+    info_table = Table(info_data, colWidths=[140, 360])
     info_table.setStyle(TableStyle([
         ('FONTSIZE', (0, 0), (-1, -1), 12),
+        ('FONTNAME', (0, 0), (-1, -1), 'NanumGothic'),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
         ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
@@ -934,16 +939,17 @@ def download_approval(req_id):
     elements.append(info_table)
     elements.append(Spacer(1, 30))
     
-    # 서명란 (영어)
+    # 서명란 (한글/영어)
     signature_style = ParagraphStyle(
         'Signature',
         parent=styles['Normal'],
+        fontName='NanumGothic',
         fontSize=12,
         alignment=1
     )
-    elements.append(Paragraph('Applicant Signature: _________________', signature_style))
+    elements.append(Paragraph('신청자 서명 / Applicant Signature: _________________', signature_style))
     elements.append(Spacer(1, 10))
-    elements.append(Paragraph('Approver Signature: _________________', signature_style))
+    elements.append(Paragraph('승인자 서명 / Approver Signature: _________________', signature_style))
     
     # PDF 생성
     doc.build(elements)
