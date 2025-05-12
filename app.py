@@ -202,16 +202,6 @@ def login():
         if user and bcrypt.checkpw(password.encode('utf-8'), user.user_pw_hash):
             session['user_id'] = user.id
             session['role'] = user.role
-            
-            # 로그인 성공 로그 기록
-            log = SystemLog(
-                action='login',
-                employee_name=user.name,
-                details=f'User {user.name} logged in successfully'
-            )
-            db.session.add(log)
-            db.session.commit()
-            
             flash('로그인되었습니다.', 'success')
             return redirect(url_for('leave'))
         else:
@@ -223,15 +213,6 @@ def login():
 def logout():
     if 'user_id' in session:
         user = Employee.query.get(session['user_id'])
-        # 로그아웃 로그 기록
-        log = SystemLog(
-            action='logout',
-            employee_name=user.name if user else '',
-            details=f'User logged out'
-        )
-        db.session.add(log)
-        db.session.commit()
-        
         session.clear()
     flash('로그아웃되었습니다.', 'success')
     return redirect(url_for('login'))
@@ -591,7 +572,7 @@ def download_history():
     output.seek(0)
     return send_file(output, as_attachment=True, download_name='leave_history.xlsx', mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
-@app.route('/system')
+@app.route('/system', methods=['GET', 'POST'])
 @login_required
 def system():
     current_user = Employee.query.get(session.get('user_id'))
@@ -655,7 +636,7 @@ def system():
                 name=name,
                 department=department,
                 position=position,
-                join_date=join_date,
+                join_date=datetime.strptime(join_date, '%Y-%m-%d'),
                 annual_leave=annual_leave,
                 used_leave=0,
                 remaining_leave=annual_leave,
@@ -759,7 +740,7 @@ def edit_employee(emp_id):
         emp.name = name
         emp.department = request.form['department'].strip()
         emp.position = request.form['position'].strip()
-        emp.join_date = join_date
+        emp.join_date = datetime.strptime(join_date, '%Y-%m-%d')
         emp.annual_leave = annual_leave
         emp.used_leave = used_leave
         emp.remaining_leave = remaining_leave
@@ -1070,8 +1051,8 @@ translations = {
         'delete_confirm': '삭제 확인',
         'no_history': '이력이 없습니다.',
         'apply_guide': '휴가 신청 안내',
-        'annual_guide': '연차는 최소 1일 전에 신청해주세요.',
-        'half_guide': '반차는 오전/오후 중 하나만 선택 가능합니다.',
+        'half_guide1': '반차(오전): 09:00~14:00',
+        'half_guide2': '반차(오후): 12:00~18:00',
         'processed': '처리',
         'pdf': 'PDF',
         'select_employee_guide': '직원을 선택하면 휴가 현황이 표시됩니다.',
@@ -1178,8 +1159,8 @@ translations = {
         'delete_confirm': 'Delete Confirm',
         'no_history': 'No history.',
         'apply_guide': 'Leave Application Guide',
-        'annual_guide': 'Annual leave must be applied at least 1 day in advance.',
-        'half_guide': 'You can only select either morning or afternoon for half-day leave.',
+        'half_guide1': 'Half-day (Morning): 09:00~14:00',
+        'half_guide2': 'Half-day (Afternoon): 12:00~18:00',
         'processed': 'Processed',
         'pdf': 'PDF',
         'select_employee_guide': 'Select an employee to view their leave status.',
