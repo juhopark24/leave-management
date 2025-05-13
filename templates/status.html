@@ -1,8 +1,8 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="container py-4">
+<div class="container py-4" style="max-width: 1600px;">
   <div class="card shadow-sm">
-    <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between border-bottom">
+    <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between border-bottom-0" style="border-radius: 0.5rem 0.5rem 0 0;">
       <div class="d-flex align-items-center">
         <i class="fas fa-tasks me-2 text-primary"></i>
         <h5 class="card-title mb-0 fw-bold">{{ t['status'] }}</h5>
@@ -16,26 +16,29 @@
     </div>
     <div class="card-body p-0">
       <div class="table-responsive">
-        <table class="table table-hover mb-0">
+        <table class="table table-hover mb-0 align-middle">
           <thead class="table-light">
             <tr>
-              <th class="py-3">{{ t['created_at'] }}</th>
-              <th class="py-3" style="min-width: 120px;">{{ t['name'] }}</th>
-              <th class="py-3">{{ t['type'] }}</th>
-              <th class="py-3">{{ t['start_date'] }}</th>
-              <th class="py-3">{{ t['end_date'] }}</th>
-              <th class="py-3" style="min-width: 120px;">{{ t['reason'] }}</th>
-              <th class="py-3 text-center" style="min-width: 90px;">{{ t['status'] }}</th>
-              <th class="py-3">{{ t['processed'] }}</th>
-              <th class="py-3">{{ t['pdf'] }}</th>
+              <th style="min-width:110px; text-align:center;">{{ t['created_at'] }}</th>
+              <th style="min-width:110px;">{{ t['name'] }}</th>
+              <th style="min-width:90px;">{{ t['type'] }}</th>
+              <th style="min-width:110px;">{{ t['start_date'] }}</th>
+              <th style="min-width:110px;">{{ t['end_date'] }}</th>
+              <th style="min-width:180px; max-width:260px;">{{ t['reason'] }}</th>
+              <th style="min-width:90px; text-align:center;">{{ t['status'] }}</th>
+              <th style="min-width:120px;">{{ t['processed'] }}</th>
+              <th style="min-width:80px;">{{ t['pdf'] }}</th>
             </tr>
           </thead>
           <tbody>
             {% for req, emp in requests %}
-            <tr class="request-main-row">
-              <td class="align-middle">{{ req.created_at }}</td>
-              <td class="align-middle">{{ emp.name }}</td>
-              <td class="align-middle">
+            <tr>
+              <td class="text-center">
+                <div>{{ req.created_at.strftime('%Y-%m-%d') }}</div>
+                <div style="font-size:0.85em; color:#666;">{{ req.created_at.strftime('%H:%M') }}</div>
+              </td>
+              <td>{{ emp.name }}</td>
+              <td>
                 {% if req.type == '연차' %}
                   <span class="badge bg-primary">{{ t['annual_leave'] }}</span>
                 {% elif req.type == '반차(오전)' %}
@@ -46,25 +49,43 @@
                   <span class="badge bg-secondary">{{ t['business_trip'] }}</span>
                 {% endif %}
               </td>
-              <td class="align-middle">{{ req.start_date }}</td>
-              <td class="align-middle">{{ req.end_date }}</td>
-              <td class="align-middle text-center">
+              <td>
+                <div>{{ req.start_date.strftime('%Y-%m-%d') }}</div>
+                <div style="font-size:0.85em; color:#666;">{{ req.start_date.strftime('%H:%M') }}</div>
+              </td>
+              <td>
+                <div>{{ req.end_date.strftime('%Y-%m-%d') }}</div>
+                <div style="font-size:0.85em; color:#666;">{{ req.end_date.strftime('%H:%M') }}</div>
+              </td>
+              <td style="max-width:260px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ req.reason }}">
+                {{ req.reason }}
+              </td>
+              <td class="text-center" style="vertical-align:middle;">
                 {% if req.status == 'pending' %}
                   <span class="badge bg-warning text-dark" style="font-size:1em;">{{ t['pending'] }}</span>
                 {% elif req.status == 'approved' %}
                   <span class="badge bg-success" style="font-size:1em;">{{ t['approved'] }}</span>
-                  {% if req.processed_at %}<br><span style="font-size:0.85em; color:#888;">{{ req.processed_at }}</span>{% endif %}
+                  {% if req.processed_at %}
+                    <br>
+                    <span style="font-size:0.85em; color:#888;">{{ req.processed_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                  {% endif %}
                 {% elif req.status == 'rejected' %}
                   <span class="badge bg-danger" style="font-size:1em;">{{ t['rejected'] }}</span>
-                  {% if req.processed_at %}<br><span style="font-size:0.85em; color:#888;">{{ req.processed_at }}</span>{% endif %}
+                  {% if req.processed_at %}
+                    <br>
+                    <span style="font-size:0.85em; color:#888;">{{ req.processed_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                  {% endif %}
                 {% elif req.status == 'cancel_pending' %}
                   <span class="badge bg-secondary" style="font-size:1em;">{{ t['cancel_pending'] }}</span>
                 {% elif req.status == 'cancelled' %}
                   <span class="badge bg-dark" style="font-size:1em;">{{ t['cancelled'] }}</span>
-                  {% if req.processed_at %}<br><span style="font-size:0.85em; color:#888;">{{ req.processed_at }}</span>{% endif %}
+                  {% if req.processed_at %}
+                    <br>
+                    <span style="font-size:0.85em; color:#888;">{{ req.processed_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                  {% endif %}
                 {% endif %}
               </td>
-              <td class="align-middle">
+              <td>
                 {% if req.status == 'pending' %}
                   <div class="btn-group">
                     <form method="post" action="/approve/{{ req.id }}" style="display:inline-block;">
@@ -97,18 +118,13 @@
                   </div>
                 {% endif %}
               </td>
-              <td class="align-middle">
+              <td>
                 {% if req.status == 'approved' %}
-                  <a href="/download_approval/{{ req.id }}" class="btn btn-sm btn-outline-primary pdf-download-btn" style="min-width:120px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:inline-block;">
+                  <a href="/download_approval/{{ req.id }}" class="btn btn-sm btn-outline-primary pdf-download-btn" title="{{ t['pdf'] }}">
                     <i class="fas fa-file-pdf me-1"></i>
                     {{ t['pdf'] }}
                   </a>
                 {% endif %}
-              </td>
-            </tr>
-            <tr class="request-reason-row">
-              <td colspan="9" class="bg-light text-secondary small p-3" style="border-top:0; border-bottom:2px solid #e9ecef; word-break:break-all;">
-                <strong>{{ t['reason'] }}:</strong> {{ req.reason }}
               </td>
             </tr>
             {% endfor %}
@@ -119,45 +135,64 @@
   </div>
 </div>
 <style>
+  .container {
+    max-width: 1600px !important;
+  }
+  .card {
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .card-header {
+    border-radius: 0.5rem 0.5rem 0 0;
+    border-bottom: 1px solid #e9ecef;
+    background: #fff;
+  }
+  .table {
+    margin-bottom: 0;
+    background: #fff;
+    border-radius: 0 0 0.5rem 0.5rem;
+    overflow: hidden;
+  }
+  .table th, .table td {
+    vertical-align: middle !important;
+    padding: 10px 12px !important;
+    font-size: 1em;
+    line-height: 1.5;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .table th {
+    font-weight: 600;
+    font-size: 1.05em;
+    background: #f8f9fa;
+    border-bottom: 2px solid #e9ecef;
+  }
+  .table td {
+    background: #fff;
+    border-bottom: 1px solid #f1f3f4;
+  }
   .pdf-download-btn {
-    min-width: 120px;
-    max-width: 180px;
+    min-width: 100px;
+    max-width: 160px;
     font-size: 1em;
     padding: 6px 16px;
     border-radius: 6px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    vertical-align: middle;
     margin: 0 auto;
     box-shadow: 0 1px 2px rgba(0,0,0,0.04);
   }
-  .table td, .table th {
-    vertical-align: middle !important;
-    padding-top: 12px !important;
-    padding-bottom: 12px !important;
-    padding-left: 10px !important;
-    padding-right: 10px !important;
-    word-break: break-all;
-    font-size: 1em;
-    line-height: 1.5;
-  }
-  .table th {
-    background: #f8f9fa;
-    font-weight: 600;
-    font-size: 1.05em;
-  }
-  .request-main-row {
-    border-bottom: 0 !important;
-  }
-  .request-reason-row td {
-    border-top: 0 !important;
-    border-bottom: 2px solid #e9ecef !important;
-    background: #f8f9fa !important;
-    color: #495057 !important;
-    font-size: 0.98em;
-    line-height: 1.7;
-    letter-spacing: 0.01em;
+  @media (max-width: 991.98px) {
+    .table th, .table td {
+      font-size: 0.97em;
+      padding: 8px 6px !important;
+    }
+    .pdf-download-btn {
+      min-width: 80px;
+      font-size: 0.95em;
+    }
   }
 </style>
 {% endblock %} 

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container py-4">
+<div class="container py-4" style="max-width: 1400px;">
     <!-- 알림 메시지 제거됨 -->
 
     <div class="row">
@@ -178,38 +178,58 @@
                         {% for request, target, applicant in requests %}
                         {% if session.get('is_admin') or session.get('user_id') == request.applicant_id or session.get('user_id') == request.target_id %}
                         <tr>
-                            <td>{{ request.created_at }}</td>
+                            <td>
+                                <div>{{ request.created_at.strftime('%Y-%m-%d') }}</div>
+                                <div style="font-size:0.85em; color:#666;">{{ request.created_at.strftime('%H:%M') }}</div>
+                            </td>
                             <td>{{ applicant.name }}</td>
                             <td>{{ target.name }}</td>
                             <td>
                                 {% if request.type == '연차' %}
                                 <span class="badge bg-primary">{{ t['annual_leave'] }}</span>
                                 {% elif request.type == '반차(오전)' %}
-                                <span class="badge bg-info p-2" style="white-space: pre-line; margin-top: 0; display: inline-block;">
-                                    {{ t['half_morning_top'] }}<br>({{ t['half_morning_bottom'] }})
-                                </span>
+                                <span class="badge bg-info">{{ t['half_morning_top'] }}</span>
                                 {% elif request.type == '반차(오후)' %}
-                                <span class="badge bg-info p-2" style="white-space: pre-line; margin-top: 0; display: inline-block;">
-                                    {{ t['half_afternoon_top'] }}<br>({{ t['half_afternoon_bottom'] }})
-                                </span>
+                                <span class="badge bg-info">{{ t['half_afternoon_top'] }}</span>
                                 {% else %}
                                 <span class="badge bg-secondary">{{ t['business_trip'] }}</span>
                                 {% endif %}
                             </td>
-                            <td>{{ request.start_date }}</td>
-                            <td>{{ request.end_date }}</td>
+                            <td>
+                                <div>{{ request.start_date.strftime('%Y-%m-%d') }}</div>
+                                <div style="font-size:0.85em; color:#666;">{{ request.start_date.strftime('%H:%M') }}</div>
+                            </td>
+                            <td>
+                                <div>{{ request.end_date.strftime('%Y-%m-%d') }}</div>
+                                <div style="font-size:0.85em; color:#666;">{{ request.end_date.strftime('%H:%M') }}</div>
+                            </td>
                             <td>
                                 {% if request.status == 'pending' %}
                                 <span class="badge bg-warning">{{ t['pending'] }}</span>
                                 {% elif request.status == 'approved' %}
                                 <span class="badge bg-success">{{ t['approved'] }}</span><br>
-                                {% if request.processed_at %}<span style="font-size: 0.75em; color: #888;">{{ request.processed_at }}</span>{% endif %}
+                                {% if request.processed_at %}
+                                <span style="font-size: 0.75em; color: #888;">
+                                    <div>{{ request.processed_at.strftime('%Y-%m-%d') }}</div>
+                                    <div>{{ request.processed_at.strftime('%H:%M') }}</div>
+                                </span>
+                                {% endif %}
                                 {% elif request.status == 'rejected' %}
                                 <span class="badge bg-danger">{{ t['rejected'] }}</span><br>
-                                {% if request.processed_at %}<span style="font-size: 0.75em; color: #888;">{{ request.processed_at }}</span>{% endif %}
+                                {% if request.processed_at %}
+                                <span style="font-size: 0.75em; color: #888;">
+                                    <div>{{ request.processed_at.strftime('%Y-%m-%d') }}</div>
+                                    <div>{{ request.processed_at.strftime('%H:%M') }}</div>
+                                </span>
+                                {% endif %}
                                 {% elif request.status == 'cancelled' %}
                                 <span class="badge bg-secondary">{{ t['cancelled'] }}</span><br>
-                                {% if request.processed_at %}<span style="font-size: 0.75em; color: #888;">{{ request.processed_at }}</span>{% endif %}
+                                {% if request.processed_at %}
+                                <span style="font-size: 0.75em; color: #888;">
+                                    <div>{{ request.processed_at.strftime('%Y-%m-%d') }}</div>
+                                    <div>{{ request.processed_at.strftime('%H:%M') }}</div>
+                                </span>
+                                {% endif %}
                                 {% endif %}
                             </td>
                             <td>
@@ -259,6 +279,16 @@
         </div>
     </div>
 </div>
+
+<style>
+  .container {
+    max-width: 1400px !important;
+  }
+  .card {
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+</style>
 
 {% endblock %}
 
@@ -372,8 +402,40 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectedType = document.querySelector('input[name="type"]:checked').value;
         if (selectedType.includes('반차')) {
             const singleDate = document.getElementById('single_date').value;
-            document.getElementById('start_date').value = singleDate;
-            document.getElementById('end_date').value = singleDate;
+            const startDate = document.getElementById('start_date');
+            const endDate = document.getElementById('end_date');
+            
+            if (selectedType === '반차(오전)') {
+                startDate.value = singleDate;
+                endDate.value = singleDate;
+                // hidden input으로 시간 정보 전달
+                const startTimeInput = document.createElement('input');
+                startTimeInput.type = 'hidden';
+                startTimeInput.name = 'start_time';
+                startTimeInput.value = '09:00';
+                this.appendChild(startTimeInput);
+
+                const endTimeInput = document.createElement('input');
+                endTimeInput.type = 'hidden';
+                endTimeInput.name = 'end_time';
+                endTimeInput.value = '14:00';
+                this.appendChild(endTimeInput);
+            } else if (selectedType === '반차(오후)') {
+                startDate.value = singleDate;
+                endDate.value = singleDate;
+                // hidden input으로 시간 정보 전달
+                const startTimeInput = document.createElement('input');
+                startTimeInput.type = 'hidden';
+                startTimeInput.name = 'start_time';
+                startTimeInput.value = '12:00';
+                this.appendChild(startTimeInput);
+
+                const endTimeInput = document.createElement('input');
+                endTimeInput.type = 'hidden';
+                endTimeInput.name = 'end_time';
+                endTimeInput.value = '18:00';
+                this.appendChild(endTimeInput);
+            }
         }
     });
 

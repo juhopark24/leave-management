@@ -328,6 +328,20 @@ def leave():
                                          selected_employee=selected_employee, 
                                          selected_type=selected_type)
 
+                # 날짜 처리 (반차는 시간 자동 세팅)
+                if type in ['반차(오전)', '반차(오후)']:
+                    date_str = request.form.get('single_date')
+                    start_time = '09:00' if type == '반차(오전)' else '12:00'
+                    end_time = '14:00' if type == '반차(오전)' else '18:00'
+                    sd = datetime.strptime(f"{date_str} {start_time}", '%Y-%m-%d %H:%M')
+                    ed = datetime.strptime(f"{date_str} {end_time}", '%Y-%m-%d %H:%M')
+                else:
+                    sd = datetime.strptime(start_date, '%Y-%m-%d')
+                    ed = datetime.strptime(end_date, '%Y-%m-%d')
+                    # 연차나 출장의 경우 종일로 설정
+                    sd = sd.replace(hour=9, minute=0)
+                    ed = ed.replace(hour=18, minute=0)
+
                 # 반차 검증
                 if type in ['반차(오전)', '반차(오후)']:
                     if sd != ed:
@@ -1065,9 +1079,9 @@ translations = {
         'please_sign_in': '계속하려면 로그인하세요',
         'contact_dev': '계정 등록 또는 비밀번호 문의는 아래 메일로 문의해주세요',
         'half_morning_top': '반차',
-        'half_morning_bottom': '(오전)',
+        'half_morning_bottom': '오전',
         'half_afternoon_top': '반차',
-        'half_afternoon_bottom': '(오후)',
+        'half_afternoon_bottom': '오후',
         'business_trip': '출장',
         'apply': '신청',
         'apply_now': '신청하기',
