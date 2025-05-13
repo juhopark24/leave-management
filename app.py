@@ -331,29 +331,62 @@ def leave():
                 # 날짜 처리 (반차는 시간 자동 세팅)
                 if type in ['반차(오전)', '반차(오후)']:
                     date_str = request.form.get('single_date')
-                    start_time = '09:00' if type == '반차(오전)' else '12:00'
-                    end_time = '14:00' if type == '반차(오전)' else '18:00'
-                    sd = datetime.strptime(f"{date_str} {start_time}", '%Y-%m-%d %H:%M')
-                    ed = datetime.strptime(f"{date_str} {end_time}", '%Y-%m-%d %H:%M')
-                else:
-                    sd = datetime.strptime(start_date, '%Y-%m-%d')
-                    ed = datetime.strptime(end_date, '%Y-%m-%d')
-                    # 연차나 출장의 경우 종일로 설정
-                    sd = sd.replace(hour=9, minute=0)
-                    ed = ed.replace(hour=18, minute=0)
-
-                # 반차 검증
-                if type in ['반차(오전)', '반차(오후)']:
-                    if sd != ed:
-                        flash('반차는 하루만 신청할 수 있습니다.')
+                    if not date_str:
+                        flash('날짜를 선택하세요.')
                         return render_template('leave_request.html', 
                                              employees=employees, 
                                              requests=get_requests(), 
                                              selected_employee=selected_employee, 
                                              selected_type=selected_type)
+                    sd = ed = datetime.strptime(date_str, '%Y-%m-%d')
+                    today = get_kst_now().date()
+                    if sd.date() < today:
+                        flash('휴가 시작일은 오늘 이후여야 합니다.')
+                        return render_template('leave_request.html', 
+                                             employees=employees, 
+                                             requests=get_requests(), 
+                                             selected_employee=selected_employee, 
+                                             selected_type=selected_type)
+                    if sd.weekday() >= 5 or is_holiday(sd.date()):
+                        flash('연차/반차는 주말과 공휴일에 신청할 수 없습니다.')
+                        return render_template('leave_request.html', 
+                                             employees=employees, 
+                                             requests=get_requests(), 
+                                             selected_employee=selected_employee, 
+                                             selected_type=selected_type)
+                    start_time = '09:00' if type == '반차(오전)' else '12:00'
+                    end_time = '14:00' if type == '반차(오전)' else '18:00'
+                    sd = datetime.strptime(f"{date_str} {start_time}", '%Y-%m-%d %H:%M')
+                    ed = datetime.strptime(f"{date_str} {end_time}", '%Y-%m-%d %H:%M')
                     days = 0.5
                 else:
-                    days = count_weekdays(sd, ed)
+                    sd = datetime.strptime(start_date, '%Y-%m-%d')
+                    ed = datetime.strptime(end_date, '%Y-%m-%d')
+                    today = get_kst_now().date()
+                    if sd.date() < today:
+                        flash('휴가 시작일은 오늘 이후여야 합니다.')
+                        return render_template('leave_request.html', 
+                                             employees=employees, 
+                                             requests=get_requests(), 
+                                             selected_employee=selected_employee, 
+                                             selected_type=selected_type)
+                    if ed < sd:
+                        flash('종료일은 시작일보다 늦어야 합니다.')
+                        return render_template('leave_request.html', 
+                                             employees=employees, 
+                                             requests=get_requests(), 
+                                             selected_employee=selected_employee, 
+                                             selected_type=selected_type)
+                    if sd.weekday() >= 5 or ed.weekday() >= 5 or is_holiday(sd.date()) or is_holiday(ed.date()):
+                        flash('연차/반차는 주말과 공휴일에 신청할 수 없습니다.')
+                        return render_template('leave_request.html', 
+                                             employees=employees, 
+                                             requests=get_requests(), 
+                                             selected_employee=selected_employee, 
+                                             selected_type=selected_type)
+                    sd = sd.replace(hour=9, minute=0)
+                    ed = ed.replace(hour=18, minute=0)
+                    days = count_weekdays(sd.date(), ed.date())
 
                 # 연차 잔여량 검증
                 if type in ['연차', '반차(오전)', '반차(오후)']:
@@ -1014,13 +1047,12 @@ def get_employee(emp_id):
     # 로그인한 사용자만 접근 가능
     if not session.get('user_id'):
         return jsonify({'error': 'Unauthorized'}), 403
-    
     emp = Employee.query.get_or_404(emp_id)
     return jsonify({
         'name': emp.name,
         'department': emp.department,
         'position': emp.position,
-        'join_date': emp.join_date,
+        'join_date': emp.join_date.strftime('%Y-%m-%d') if emp.join_date else '',
         'annual_leave': emp.annual_leave,
         'used_leave': emp.used_leave,
         'remaining_leave': emp.remaining_leave,

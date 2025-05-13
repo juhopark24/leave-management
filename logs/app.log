@@ -16,3 +16,19 @@
 2025-05-13 20:19:57,806 INFO: TimeOff Manager startup [in /Users/juhopark/workspace/leave-tracker/app.py:42]
 2025-05-13 20:22:12,615 INFO: TimeOff Manager startup [in /Users/juhopark/workspace/leave-tracker/app.py:42]
 2025-05-13 20:22:13,352 INFO: TimeOff Manager startup [in /Users/juhopark/workspace/leave-tracker/app.py:42]
+2025-05-13 20:25:04,898 INFO: TimeOff Manager startup [in /Users/juhopark/workspace/leave-tracker/app.py:42]
+2025-05-13 20:25:05,629 INFO: TimeOff Manager startup [in /Users/juhopark/workspace/leave-tracker/app.py:42]
+2025-05-13 20:27:11,474 INFO: TimeOff Manager startup [in /Users/juhopark/workspace/leave-tracker/app.py:42]
+2025-05-13 20:29:54,854 INFO: TimeOff Manager startup [in /Users/juhopark/workspace/leave-tracker/app.py:42]
+2025-05-13 20:36:42,510 INFO: TimeOff Manager startup [in /Users/juhopark/workspace/leave-tracker/app.py:42]
+2025-05-13 20:36:42,584 ERROR: Migration error: (sqlite3.OperationalError) no such column: employee.signature
+[SQL: SELECT employee.id AS employee_id, employee.name AS employee_name, employee.department AS employee_department, employee.position AS employee_position, employee.join_date AS employee_join_date, employee.annual_leave AS employee_annual_leave, employee.used_leave AS employee_used_leave, employee.remaining_leave AS employee_remaining_leave, employee.user_id AS employee_user_id, employee.user_pw_hash AS employee_user_pw_hash, employee.role AS employee_role, employee.signature AS employee_signature 
+FROM employee]
+(Background on this error at: https://sqlalche.me/e/20/e3q8) [in /Users/juhopark/workspace/leave-tracker/app.py:1462]
+2025-05-13 20:37:07,185 INFO: TimeOff Manager startup [in /Users/juhopark/workspace/leave-tracker/app.py:42]
+2025-05-13 20:37:07,239 ERROR: Migration error: (sqlite3.OperationalError) no such column: employee.signature
+[SQL: SELECT employee.id AS employee_id, employee.name AS employee_name, employee.department AS employee_department, employee.position AS employee_position, employee.join_date AS employee_join_date, employee.annual_leave AS employee_annual_leave, employee.used_leave AS employee_used_leave, employee.remaining_leave AS employee_remaining_leave, employee.user_id AS employee_user_id, employee.user_pw_hash AS employee_user_pw_hash, employee.role AS employee_role, employee.signature AS employee_signature 
+FROM employee]
+(Background on this error at: https://sqlalche.me/e/20/e3q8) [in /Users/juhopark/workspace/leave-tracker/app.py:1462]
+2025-05-13 20:39:48,050 INFO: TimeOff Manager startup [in /Users/juhopark/workspace/leave-tracker/app.py:42]
+2025-05-13 20:39:48,799 INFO: TimeOff Manager startup [in /Users/juhopark/workspace/leave-tracker/app.py:42]

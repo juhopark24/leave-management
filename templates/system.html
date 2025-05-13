@@ -172,7 +172,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <form id="editForm" method="post" class="row g-3">
+        <form id="editForm" method="post" class="row g-3" enctype="multipart/form-data">
           <div class="col-md-6">
             <label class="form-label">Name <span class="text-danger">*</span></label>
             <input name="name" class="form-control" required>
@@ -366,7 +366,11 @@ function editEmployee(empId) {
       form.querySelector('[name="name"]').value = emp.name;
       form.querySelector('[name="department"]').value = emp.department || '';
       form.querySelector('[name="position"]').value = emp.position || '';
-      form.querySelector('[name="join_date"]').value = emp.join_date;
+      if (emp.join_date) {
+        form.querySelector('[name="join_date"]').value = emp.join_date.substring(0, 10);
+      } else {
+        form.querySelector('[name="join_date"]').value = '';
+      }
       form.querySelector('[name="annual_leave"]').value = emp.annual_leave;
       form.querySelector('[name="used_leave"]').value = emp.used_leave;
       form.querySelector('[name="remaining_leave"]').value = emp.remaining_leave;
