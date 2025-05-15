@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>로그인 - TimeOff Manager</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light d-flex align-items-center" style="min-height:100vh;">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-4">
+                <div class="card shadow mt-5">
+                    <div class="card-body">
+                        <h3 class="card-title text-center mb-4">TimeOff Manager 로그인</h3>
+                        <form method="post">
+                            <div class="mb-3">
+                                <input type="text" name="user_id" class="form-control" placeholder="ID" required>
+                            </div>
+                            <div class="mb-3">
+                                <input type="password" name="password" class="form-control" placeholder="비밀번호" required>
+                            </div>
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-primary w-100">로그인</button>
+                        </form>
+                        {% with messages = get_flashed_messages() %}
+                          {% if messages %}
+                            <div class="alert alert-warning mt-3">
+                              {% for message in messages %}
+                                <div>{{ message }}</div>
+                              {% endfor %}
+                            </div>
+                          {% endif %}
+                        {% endwith %}
+                    </div>
+                </div>
+                <div class="text-center mt-3 text-muted" style="font-size:0.95em;">
+                    계정 문의: help@timeoffmanager.com
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

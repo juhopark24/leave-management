@@ -1,0 +1,487 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 1400px;">
+    <!-- 알림 메시지 제거됨 -->
+
+    <div class="row">
+        <!-- 신청 폼 -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-calendar-plus text-primary me-2"></i>
+                        {{ t['apply'] }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('leave') }}" class="needs-validation" novalidate>
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <!-- 직원 선택 -->
+                        <div class="mb-4">
+                            <label for="employee_id" class="form-label">{{ t['select_employee'] }}</label>
+                            <select class="form-select" id="employee_id" name="employee_id" required>
+                                <option value="">{{ t['select_employee'] }}</option>
+                                {% for employee in employees %}
+                                <option value="{{ employee.id }}" {% if selected_employee == employee.id|string %}selected{% endif %}>
+                                    {{ employee.name }} ({{ employee.department }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="invalid-feedback">{{ t['select_employee'] }} is required.</div>
+                        </div>
+
+                        <!-- 신청 유형 -->
+                        <div class="mb-4">
+                            <label class="form-label">{{ t['leave_type'] }}</label>
+                            <div class="d-flex">
+                                <div class="form-check me-3">
+                                    <input class="form-check-input" type="radio" name="type" id="annual" value="연차" {% if selected_type == '연차' %}checked{% endif %} required>
+                                    <label class="form-check-label" for="annual">
+                                        {{ t['annual_leave'] }}
+                                    </label>
+                                </div>
+                                <div class="form-check me-3">
+                                    <input class="form-check-input" type="radio" name="type" id="half_morning" value="반차(오전)" {% if selected_type == '반차(오전)' %}checked{% endif %}>
+                                    <label class="form-check-label" for="half_morning">
+                                        <span>{{ t['half_morning_top'] }}</span><br><span>{{ t['half_morning_bottom'] }}</span>
+                                    </label>
+                                </div>
+                                <div class="form-check me-3">
+                                    <input class="form-check-input" type="radio" name="type" id="half_afternoon" value="반차(오후)" {% if selected_type == '반차(오후)' %}checked{% endif %}>
+                                    <label class="form-check-label" for="half_afternoon">
+                                        <span>{{ t['half_afternoon_top'] }}</span><br><span>{{ t['half_afternoon_bottom'] }}</span>
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="type" id="business_trip" value="출장" {% if selected_type == '출장' %}checked{% endif %}>
+                                    <label class="form-check-label" for="business_trip">
+                                        {{ t['business_trip'] }}
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 신청 기간 -->
+                        <div class="mb-4">
+                            <div id="dateRangePicker" class="row">
+                                <div class="col-md-6">
+                                    <label for="start_date" class="form-label">{{ t['start_date'] }}</label>
+                                    <input type="date" class="form-control" id="start_date" name="start_date" required>
+                                    <div class="invalid-feedback">{{ t['start_date'] }} is required.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="end_date" class="form-label">{{ t['end_date'] }}</label>
+                                    <input type="date" class="form-control" id="end_date" name="end_date" required>
+                                    <div class="invalid-feedback">{{ t['end_date'] }} is required.</div>
+                                </div>
+                            </div>
+                            <div id="singleDatePicker" class="row" style="display: none;">
+                                <div class="col-md-12">
+                                    <label for="single_date" class="form-label">{{ t['start_date'] }}</label>
+                                    <input type="date" class="form-control" id="single_date" name="single_date">
+                                    <div class="invalid-feedback">{{ t['start_date'] }} is required.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 신청 사유 -->
+                        <div class="mb-4">
+                            <label for="reason" class="form-label">{{ t['reason'] }}</label>
+                            <textarea class="form-control" id="reason" name="reason" rows="2" required></textarea>
+                            <div class="invalid-feedback">{{ t['reason'] }} is required.</div>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane me-2"></i>{{ t['apply_now'] }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 휴가 현황 및 안내 -->
+        <div class="col-lg-4">
+            <!-- 휴가 현황 -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-pie text-primary me-2"></i>
+                        {{ t['leave_status'] }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="leaveStatus">
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-user-circle fa-3x mb-3"></i>
+                            <p class="mb-0">{{ t['select_employee_guide'] }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 휴가 신청 안내 -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-info-circle text-primary me-2"></i>
+                        {{ t['apply_guide'] }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <!-- <li class="mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            {{ t['annual_guide'] }}
+                        </li> -->
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            {{ t['half_guide1'] }}
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            {{ t['half_guide2'] }}
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 신청내역 -->
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-white py-3">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-history text-primary me-2"></i>
+                {{ t['history'] }}
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>{{ t['created_at'] }}</th>
+                            <th>{{ t['applicant'] }}</th>
+                            <th>{{ t['target'] }}</th>
+                            <th>{{ t['type'] }}</th>
+                            <th>{{ t['start_date'] }}</th>
+                            <th>{{ t['end_date'] }}</th>
+                            <th>{{ t['status'] }}</th>
+                            <th>{{ t['manage'] }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for request, target, applicant in requests %}
+                        {% if session.get('is_admin') or session.get('user_id') == request.applicant_id or session.get('user_id') == request.target_id %}
+                        <tr>
+                            <td>
+                                <div>{{ request.created_at.strftime('%Y-%m-%d') }}</div>
+                                <div style="font-size:0.85em; color:#666;">{{ request.created_at.strftime('%H:%M') }}</div>
+                            </td>
+                            <td>{{ applicant.name }}</td>
+                            <td>{{ target.name }}</td>
+                            <td>
+                                {% if request.type == '연차' %}
+                                <span class="badge bg-primary">{{ t['annual_leave'] }}</span>
+                                {% elif request.type == '반차(오전)' %}
+                                <span class="badge bg-info">{{ t['half_morning_top'] }}</span>
+                                {% elif request.type == '반차(오후)' %}
+                                <span class="badge bg-info">{{ t['half_afternoon_top'] }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ t['business_trip'] }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div>{{ request.start_date.strftime('%Y-%m-%d') }}</div>
+                                <div style="font-size:0.85em; color:#666;">{{ request.start_date.strftime('%H:%M') }}</div>
+                            </td>
+                            <td>
+                                <div>{{ request.end_date.strftime('%Y-%m-%d') }}</div>
+                                <div style="font-size:0.85em; color:#666;">{{ request.end_date.strftime('%H:%M') }}</div>
+                            </td>
+                            <td>
+                                {% if request.status == 'pending' %}
+                                <span class="badge bg-warning">{{ t['pending'] }}</span>
+                                {% elif request.status == 'approved' %}
+                                <span class="badge bg-success">{{ t['approved'] }}</span><br>
+                                {% if request.processed_at %}
+                                <span style="font-size: 0.75em; color: #888;">
+                                    <div>{{ request.processed_at.strftime('%Y-%m-%d') }}</div>
+                                    <div>{{ request.processed_at.strftime('%H:%M') }}</div>
+                                </span>
+                                {% endif %}
+                                {% elif request.status == 'rejected' %}
+                                <span class="badge bg-danger">{{ t['rejected'] }}</span><br>
+                                {% if request.processed_at %}
+                                <span style="font-size: 0.75em; color: #888;">
+                                    <div>{{ request.processed_at.strftime('%Y-%m-%d') }}</div>
+                                    <div>{{ request.processed_at.strftime('%H:%M') }}</div>
+                                </span>
+                                {% endif %}
+                                {% elif request.status == 'cancelled' %}
+                                <span class="badge bg-secondary">{{ t['cancelled'] }}</span><br>
+                                {% if request.processed_at %}
+                                <span style="font-size: 0.75em; color: #888;">
+                                    <div>{{ request.processed_at.strftime('%Y-%m-%d') }}</div>
+                                    <div>{{ request.processed_at.strftime('%H:%M') }}</div>
+                                </span>
+                                {% endif %}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if request.status == 'pending' and (session.get('is_admin') or session.get('user_id') == request.applicant_id) %}
+                                <button class="btn btn-sm btn-outline-danger" 
+                                        onclick="showCancelModal('{{ request.id }}')">
+                                    <i class="fas fa-times"></i> {{ t['cancel'] }}
+                                </button>
+                                {% elif request.status == 'approved' and session.get('user_id') == request.applicant_id %}
+                                <button class="btn btn-sm btn-outline-danger" 
+                                        onclick="showCancelModal('{{ request.id }}')">
+                                    <i class="fas fa-times"></i> {{ t['cancel'] }}
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 휴가 취소 모달 -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ t['cancel_request'] }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="cancelForm" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label for="cancel_reason" class="form-label">{{ t['cancel_reason'] }}</label>
+                        <textarea class="form-control" id="cancel_reason" name="cancel_reason" rows="3" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t['close'] }}</button>
+                <button type="submit" form="cancelForm" class="btn btn-danger">{{ t['cancel'] }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+  .container {
+    max-width: 1400px !important;
+  }
+  .card {
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 휴가 현황 조회
+    function updateLeaveStatus(employeeId) {
+        const leaveStatusDiv = document.getElementById('leaveStatus');
+        if (!employeeId) {
+            leaveStatusDiv.innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-user-circle fa-3x mb-3"></i>
+                    <p class="mb-0">{{ t['select_employee_guide'] }}</p>
+                </div>
+            `;
+            return;
+        }
+        fetch(`/get_employee/${employeeId}`)
+            .then(response => {
+                if (!response.ok) throw new Error('서버 응답 오류: ' + response.status);
+                return response.json();
+            })
+            .then(data => {
+                if (data.error) {
+                    leaveStatusDiv.innerHTML = `<div class='alert alert-danger'>${data.error}</div>`;
+                } else {
+                    leaveStatusDiv.innerHTML = `
+                        <div class="d-flex flex-column">
+                            <div class="d-flex align-items-center justify-content-between py-1">
+                                <span class="text-muted small">총 연차</span>
+                                <span class="fw-bold text-primary">${data.annual_leave}일</span>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between py-1">
+                                <span class="text-muted small">사용 연차</span>
+                                <span class="fw-bold text-success">${data.used_leave}일</span>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between py-1">
+                                <span class="text-muted small">잔여 연차</span>
+                                <span class="fw-bold text-info">${data.remaining_leave}일</span>
+                            </div>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                leaveStatusDiv.innerHTML = `<div class='alert alert-danger'>휴가 현황을 불러오는데 실패했습니다.<br>${error}</div>`;
+            });
+    }
+
+    // 직원 선택 시 휴가 현황 업데이트
+    const employeeSelect = document.getElementById('employee_id');
+    if (employeeSelect) {
+        employeeSelect.addEventListener('change', function() {
+            updateLeaveStatus(this.value);
+        });
+        // 페이지 로드 시 선택된 직원이 있으면 휴가 현황 표시
+        if (employeeSelect.value) {
+            updateLeaveStatus(employeeSelect.value);
+        }
+    }
+
+    // 휴가 유형 선택 시 처리
+    document.querySelectorAll('input[name="type"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const employeeId = employeeSelect ? employeeSelect.value : null;
+            const dateRangePicker = document.getElementById('dateRangePicker');
+            const singleDatePicker = document.getElementById('singleDatePicker');
+            const startDate = document.getElementById('start_date');
+            const endDate = document.getElementById('end_date');
+            const singleDate = document.getElementById('single_date');
+
+            if (this.value.includes('반차')) {
+                dateRangePicker.style.display = 'none';
+                singleDatePicker.style.display = 'block';
+                startDate.removeAttribute('required');
+                endDate.removeAttribute('required');
+                singleDate.setAttribute('required', '');
+                
+                // 반차 선택 시 날짜 자동 설정
+                const today = new Date();
+                const tomorrow = new Date(today);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                // 주말인 경우 다음 월요일로 설정
+                while (tomorrow.getDay() === 0 || tomorrow.getDay() === 6) {
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                }
+                const formatDate = (date) => {
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                };
+                singleDate.value = formatDate(tomorrow);
+            } else {
+                dateRangePicker.style.display = 'flex';
+                singleDatePicker.style.display = 'none';
+                startDate.setAttribute('required', '');
+                endDate.setAttribute('required', '');
+                singleDate.removeAttribute('required');
+            }
+
+            if (this.value !== '출장') {
+                updateLeaveStatus(employeeId);
+            }
+        });
+    });
+
+    // 폼 제출 시 반차인 경우 시작일/종료일 설정
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const selectedType = document.querySelector('input[name="type"]:checked').value;
+        if (selectedType.includes('반차')) {
+            const singleDate = document.getElementById('single_date').value;
+            const startDate = document.getElementById('start_date');
+            const endDate = document.getElementById('end_date');
+            
+            if (selectedType === '반차(오전)') {
+                startDate.value = singleDate;
+                endDate.value = singleDate;
+                // hidden input으로 시간 정보 전달
+                const startTimeInput = document.createElement('input');
+                startTimeInput.type = 'hidden';
+                startTimeInput.name = 'start_time';
+                startTimeInput.value = '09:00';
+                this.appendChild(startTimeInput);
+
+                const endTimeInput = document.createElement('input');
+                endTimeInput.type = 'hidden';
+                endTimeInput.name = 'end_time';
+                endTimeInput.value = '14:00';
+                this.appendChild(endTimeInput);
+            } else if (selectedType === '반차(오후)') {
+                startDate.value = singleDate;
+                endDate.value = singleDate;
+                // hidden input으로 시간 정보 전달
+                const startTimeInput = document.createElement('input');
+                startTimeInput.type = 'hidden';
+                startTimeInput.name = 'start_time';
+                startTimeInput.value = '12:00';
+                this.appendChild(startTimeInput);
+
+                const endTimeInput = document.createElement('input');
+                endTimeInput.type = 'hidden';
+                endTimeInput.name = 'end_time';
+                endTimeInput.value = '18:00';
+                this.appendChild(endTimeInput);
+            }
+        }
+    });
+
+    // 휴가 취소 모달
+    window.showCancelModal = function(requestId) {
+        console.log('showCancelModal called with', requestId);
+        if (!requestId) return;
+        const modal = new bootstrap.Modal(document.getElementById('cancelModal'));
+        const form = document.getElementById('cancelForm');
+        form.action = `/cancel_request/${requestId}`;
+        
+        // 모달이 닫힐 때 폼 초기화
+        document.getElementById('cancelModal').addEventListener('hidden.bs.modal', function () {
+            form.reset();
+            form.classList.remove('was-validated');
+        });
+        
+        modal.show();
+    }
+
+    // 취소 폼 유효성 검사
+    const cancelForm = document.getElementById('cancelForm');
+    if (cancelForm) {
+        cancelForm.addEventListener('submit', function(event) {
+            if (!this.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            this.classList.add('was-validated');
+        });
+    }
+
+    // 폼 유효성 검사
+    (function () {
+        'use strict'
+        const forms = document.querySelectorAll('.needs-validation')
+        Array.from(forms).forEach(form => {
+            form.addEventListener('submit', event => {
+                if (!form.checkValidity()) {
+                    event.preventDefault()
+                    event.stopPropagation()
+                }
+                form.classList.add('was-validated')
+            }, false)
+        })
+    })()
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,41 @@
+              <td class="align-middle">
+                {% if req.status == 'pending' %}
+                  <span class="badge bg-warning text-dark">진행중</span>
+                {% elif req.status == 'approved' %}
+                  <span class="badge bg-success">승인 ({{ req.processed_at }})</span>
+                {% elif req.status == 'rejected' %}
+                  <span class="badge bg-danger">거절 ({{ req.processed_at }})</span>
+                {% elif req.status == 'cancel_pending' %}
+                  <span class="badge bg-secondary">취소 요청</span>
+                {% elif req.status == 'cancelled' %}
+                  <span class="badge bg-dark">취소 완료</span>
+                {% endif %}
+              </td>
+              <td class="align-middle">
+                {% if req.status == 'pending' %}
+                <form method="post" action="/approve/{{ req.id }}" style="display:inline-block;">
+                  <button class="btn btn-sm btn-success me-1" type="submit">
+                    <i class="fas fa-check me-1"></i>
+                    승인
+                  </button>
+                </form>
+                <form method="post" action="/reject/{{ req.id }}" style="display:inline-block;">
+                  <button class="btn btn-sm btn-danger" type="submit">
+                    <i class="fas fa-times me-1"></i>
+                    거절
+                  </button>
+                </form>
+                {% elif req.status == 'cancel_pending' %}
+                <form method="post" action="/approve_cancel/{{ req.id }}" style="display:inline-block;">
+                  <button class="btn btn-sm btn-success me-1" type="submit">
+                    <i class="fas fa-check me-1"></i>
+                    취소 승인
+                  </button>
+                </form>
+                <form method="post" action="/reject_cancel/{{ req.id }}" style="display:inline-block;">
+                  <button class="btn btn-sm btn-danger" type="submit">
+                    <i class="fas fa-times me-1"></i>
+                    취소 거절
+                  </button>
+                </form>
+                {% endif %} 
