@@ -32,5 +32,8 @@ FROM employee]
 (Background on this error at: https://sqlalche.me/e/20/e3q8) [in /Users/juhopark/workspace/leave-tracker/app.py:1462]
 2025-05-13 20:39:48,050 INFO: TimeOff Manager startup [in /Users/juhopark/workspace/leave-tracker/app.py:42]
 2025-05-13 20:39:48,799 INFO: TimeOff Manager startup [in /Users/juhopark/workspace/leave-tracker/app.py:42]
+<<<<<<< HEAD
 2025-05-15 22:24:25,078 INFO: TimeOff Manager startup [in /Users/juhopark/workspace/leave-tracker/app.py:42]
 2025-05-15 22:24:25,843 INFO: TimeOff Manager startup [in /Users/juhopark/workspace/leave-tracker/app.py:42]
+=======
+>>>>>>> 002ab9f9e616c6cb54aee28d927237c6b6790859
