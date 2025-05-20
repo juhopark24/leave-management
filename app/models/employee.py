@@ -7,6 +7,7 @@ class Employee(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
+    eng_name = db.Column(db.String(100))
     department = db.Column(db.String(100))
     position = db.Column(db.String(100))
     join_date = db.Column(db.Date, nullable=False)
