@@ -184,6 +184,9 @@ def reject_leave(request_id):
         return redirect(url_for('system.system'))
         
     leave_request.update_status('rejected')
+    employee = leave_request.employee
+    if leave_request.leave_type in ['annual', '반차(오전)', '반차(오후)', 'half_day']:
+        employee.remaining_leave += leave_request.days
     db.session.commit()
     
     log_system_action('reject_leave', f"Leave request rejected", leave_request.employee_id)
