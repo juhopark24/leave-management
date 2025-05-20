@@ -4,7 +4,7 @@ from app.models.leave_request import LeaveRequest
 from app.models.system_log import SystemLog
 from app.utils.security import admin_required, csrf_protect
 from app.utils.logger import log_system_action, log_employee_change
-from app.utils.date_utils import format_date, round_to_half
+from app.utils.date_utils import format_date, parse_date, round_to_half
 from app.extensions import db
 
 bp = Blueprint('system', __name__)
@@ -53,7 +53,7 @@ def add_employee():
         name=name,
         department=department,
         position=position,
-        join_date=format_date(join_date),
+        join_date=parse_date(join_date),
         annual_leave=annual_leave,
         user_id=user_id
     )
@@ -114,7 +114,7 @@ def edit_employee(employee_id):
     employee.name = name
     employee.department = department
     employee.position = position
-    employee.join_date = format_date(join_date)
+    employee.join_date = parse_date(join_date)
     employee.annual_leave = annual_leave
     employee.used_leave = used_leave
     employee.remaining_leave = annual_leave - used_leave
@@ -184,6 +184,9 @@ def reject_leave(request_id):
         return redirect(url_for('system.system'))
         
     leave_request.update_status('rejected')
+    employee = leave_request.employee
+    if leave_request.leave_type in ['annual', '반차(오전)', '반차(오후)', 'half_day']:
+        employee.remaining_leave += leave_request.days
     db.session.commit()
     
     log_system_action('reject_leave', f"Leave request rejected", leave_request.employee_id)
