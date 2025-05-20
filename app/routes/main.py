@@ -3,7 +3,7 @@ from app.models.employee import Employee
 from app.models.leave_request import LeaveRequest
 from app.utils.security import login_required, admin_required, csrf_protect
 from app.utils.logger import log_system_action
-from app.utils.date_utils import get_kst_now, format_date, is_holiday, count_weekdays, round_to_half
+from app.utils.date_utils import get_kst_now, format_date, parse_date, is_holiday, count_weekdays, round_to_half
 from app.extensions import db
 
 bp = Blueprint('main', __name__)
@@ -34,8 +34,8 @@ def request_leave():
             flash('사유는 5자 이상 입력해주세요.')
             return redirect(url_for('main.request_leave'))
             
-        start_date = format_date(start_date)
-        end_date = format_date(end_date)
+        start_date = parse_date(start_date)
+        end_date = parse_date(end_date)
         
         if start_date < get_kst_now().date():
             flash('시작일은 오늘 이후여야 합니다.')

@@ -17,6 +17,7 @@
           <thead class="table-light">
             <tr>
               <th class="py-3" style="min-width: 100px;">Name</th>
+              <th class="py-3" style="min-width: 120px;">Eng. Name</th>
               <th class="py-3" style="min-width: 120px;">Department</th>
               <th class="py-3" style="min-width: 100px;">Position</th>
               <th class="py-3" style="min-width: 120px;">Join Date</th>
@@ -32,6 +33,7 @@
             {% for emp in employees %}
             <tr>
               <td>{{ emp.name }}</td>
+              <td>{{ emp.eng_name }}</td>
               <td>{{ emp.department }}</td>
               <td>{{ emp.position }}</td>
               <td>{{ emp.join_date }}</td>
@@ -123,6 +125,10 @@
             <input name="name" class="form-control" required>
           </div>
           <div class="col-md-6">
+            <label class="form-label">English Name</label>
+            <input name="eng_name" class="form-control">
+          </div>
+          <div class="col-md-6">
             <label class="form-label">Department</label>
             <input name="department" class="form-control">
           </div>
@@ -173,13 +179,17 @@
       </div>
       <div class="modal-body">
         <form id="editForm" method="post" class="row g-3" enctype="multipart/form-data">
-          <div class="col-md-6">
-            <label class="form-label">Name <span class="text-danger">*</span></label>
-            <input name="name" class="form-control" required>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Department</label>
-            <input name="department" class="form-control">
+            <div class="col-md-6">
+              <label class="form-label">Name <span class="text-danger">*</span></label>
+              <input name="name" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">English Name</label>
+              <input name="eng_name" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Department</label>
+              <input name="department" class="form-control">
           </div>
           <div class="col-md-6">
             <label class="form-label">Position</label>
@@ -364,6 +374,7 @@ function editEmployee(empId) {
       
       // 폼 필드 채우기
       form.querySelector('[name="name"]').value = emp.name;
+      form.querySelector('[name="eng_name"]').value = emp.eng_name || '';
       form.querySelector('[name="department"]').value = emp.department || '';
       form.querySelector('[name="position"]').value = emp.position || '';
       if (emp.join_date) {

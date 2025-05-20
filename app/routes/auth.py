@@ -33,4 +33,4 @@ def logout():
     if 'user_id' in session:
         log_system_action('logout', f"User {session.get('user_name')} logged out", session.get('user_id'))
     session.clear()
-    return redirect(url_for('auth.login')) 
+    return redirect(url_for('auth.login'))
