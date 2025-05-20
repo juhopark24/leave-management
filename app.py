@@ -1265,6 +1265,14 @@ def display_leave_type(type_code, lang=None):
 app.jinja_env.globals['display_leave_type'] = display_leave_type
 
 if __name__ == '__main__':
+    # 환경 변수로 분기: Render 등 배포 환경에서는 host/port 지정, 로컬은 기본값
+    is_render = os.environ.get('RENDER', None) is not None or os.environ.get('FLASK_RUN_HOST') == '0.0.0.0' or os.environ.get('PORT') not in [None, '', '5000']
+    if is_render:
+        host = '0.0.0.0'
+        port = int(os.environ.get('PORT', 5000))
+    else:
+        host = '127.0.0.1'
+        port = 5000
     with app.app_context():
         # 모든 공휴일 데이터 삭제
         # Holiday.query.delete()  # Holiday 관련 데이터 삭제 코드 제거
@@ -1371,4 +1379,4 @@ if __name__ == '__main__':
             ))
             db.session.commit()
     
-    app.run(debug=True)
+    app.run(host=host, port=port)
