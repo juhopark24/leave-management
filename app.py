@@ -20,15 +20,20 @@ from sqlalchemy.orm import aliased
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from app.utils.pdf_utils import generate_leave_pdf
+from app.models.employee import Employee
+from app.models.leave_request import LeaveRequest
+from app.models.system_log import SystemLog
+from app.models import db, init_db
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///work_manager.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-db = SQLAlchemy(app)
+# DB 초기화
+init_db(app)
 
 # 로깅 설정 (app 생성 이후로 이동)
 if not os.path.exists('logs'):
@@ -136,63 +141,6 @@ class AdminPassword(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     pw_hash = db.Column(db.LargeBinary(128), nullable=False)
 
-class Employee(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), nullable=False)
-    eng_name = db.Column(db.String(50))
-    department = db.Column(db.String(50))
-    position = db.Column(db.String(50))
-    join_date = db.Column(db.DateTime, nullable=False)
-    annual_leave = db.Column(db.Integer, default=15)
-    used_leave = db.Column(db.Float, default=0)
-    remaining_leave = db.Column(db.Float, default=15)
-    user_id = db.Column(db.String(50), unique=True)
-    user_pw_hash = db.Column(db.LargeBinary(128))
-    role = db.Column(db.String(10), default='user')
-    leave_requests = db.relationship(
-        'LeaveRequest',
-        backref='employee',
-        cascade='all, delete-orphan',
-        foreign_keys='LeaveRequest.target_id'
-    )
-    my_requests = db.relationship(
-        'LeaveRequest',
-        foreign_keys='LeaveRequest.applicant_id',
-        backref='applicant'
-    )
-
-class LeaveRequest(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    applicant_id = db.Column(db.Integer, db.ForeignKey('employee.id', ondelete='SET NULL'))
-    target_id = db.Column(db.Integer, db.ForeignKey('employee.id', ondelete='CASCADE'))
-    type = db.Column(db.String(20))
-    start_date = db.Column(db.DateTime, nullable=False)
-    end_date = db.Column(db.DateTime, nullable=False)
-    reason = db.Column(db.String(200))
-    status = db.Column(db.String(20), default='pending')
-    created_at = db.Column(db.DateTime, default=lambda: get_kst_now())
-    processed_at = db.Column(db.DateTime)
-    leave_days = db.Column(db.Float, default=0)
-    cancel_requested = db.Column(db.Boolean, default=False)
-    cancel_reason = db.Column(db.String(200))
-    cancel_at = db.Column(db.DateTime)
-
-class SystemLog(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    timestamp = db.Column(db.DateTime, default=lambda: get_kst_now())
-    action = db.Column(db.String(20))  # add, edit, delete
-    employee_name = db.Column(db.String(50))
-    details = db.Column(db.String(200))
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'timestamp': format_kst_datetime(self.timestamp),
-            'action': self.action,
-            'employee_name': self.employee_name,
-            'details': self.details
-        }
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -246,30 +194,19 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# 공휴일 관리를 위한 클래스 추가
-class Holiday(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    date = db.Column(db.Date, nullable=False, unique=True)
-    name = db.Column(db.String(50), nullable=False)
-    year = db.Column(db.Integer, nullable=False)
-
-# 공휴일 체크 함수 수정
-def is_holiday(date):
-    if isinstance(date, str):
-        date = datetime.strptime(date, '%Y-%m-%d').date()
-    return Holiday.query.filter_by(date=date).first() is not None
-
-# 주말 체크 함수 추가
 def is_weekend(date):
-    if isinstance(date, str):
-        date = datetime.strptime(date, '%Y-%m-%d').date()
-    return date.weekday() >= 5  # 5: Saturday, 6: Sunday
+    """주말(토,일) 체크 함수"""
+    return date.weekday() >= 5  # 5: 토요일, 6: 일요일
 
-# 유효한 휴가 날짜인지 체크하는 함수 추가
-def is_valid_leave_date(date):
-    if isinstance(date, str):
-        date = datetime.strptime(date, '%Y-%m-%d').date()
-    return not (is_holiday(date) or is_weekend(date))
+def count_weekdays(start, end):
+    """주말을 제외한 평일 수를 계산"""
+    days = 0
+    current = start
+    while current <= end:
+        if not is_weekend(current):
+            days += 1
+        current += timedelta(days=1)
+    return days
 
 @app.route('/', methods=['GET', 'POST'])
 @login_required
@@ -313,10 +250,10 @@ def leave():
                                              selected_employee=selected_employee, 
                                              selected_type=selected_type)
                     
-                    # 연차/반차의 경우 주말과 공휴일 제외
+                    # 연차/반차의 경우 주말 제외
                     if type in ['연차', '반차(오전)', '반차(오후)']:
-                        if sd.weekday() >= 5 or ed.weekday() >= 5 or is_holiday(start_date) or is_holiday(end_date):
-                            flash('연차/반차는 주말과 공휴일에 신청할 수 없습니다.')
+                        if is_weekend(sd.date()) or is_weekend(ed.date()):
+                            flash('연차/반차는 주말에 신청할 수 없습니다.')
                             return render_template('leave_request.html', 
                                                  employees=employees, 
                                                  requests=get_requests(), 
@@ -349,8 +286,8 @@ def leave():
                                              requests=get_requests(), 
                                              selected_employee=selected_employee, 
                                              selected_type=selected_type)
-                    if sd.weekday() >= 5 or is_holiday(sd.date()):
-                        flash('연차/반차는 주말과 공휴일에 신청할 수 없습니다.')
+                    if is_weekend(sd.date()):
+                        flash('연차/반차는 주말에 신청할 수 없습니다.')
                         return render_template('leave_request.html', 
                                              employees=employees, 
                                              requests=get_requests(), 
@@ -379,8 +316,8 @@ def leave():
                                              requests=get_requests(), 
                                              selected_employee=selected_employee, 
                                              selected_type=selected_type)
-                    if sd.weekday() >= 5 or ed.weekday() >= 5 or is_holiday(sd.date()) or is_holiday(ed.date()):
-                        flash('연차/반차는 주말과 공휴일에 신청할 수 없습니다.')
+                    if type == '연차' and (is_weekend(sd.date()) or is_weekend(ed.date())):
+                        flash('연차는 주말에 신청할 수 없습니다.')
                         return render_template('leave_request.html', 
                                              employees=employees, 
                                              requests=get_requests(), 
@@ -421,8 +358,8 @@ def leave():
                                          selected_employee=selected_employee, 
                                          selected_type=selected_type)
 
-                # 연차 사용량 업데이트
-                if type in ['연차','반차(오전)','반차(오후)']:
+                # 연차 사용량 업데이트 (신청 시점에 차감)
+                if type in ['연차', '반차(오전)', '반차(오후)']:
                     emp.used_leave = round_to_half(emp.used_leave + days)
                     emp.remaining_leave = round_to_half(emp.annual_leave - emp.used_leave)
 
@@ -494,6 +431,12 @@ def cancel_request(req_id):
 
     # 대기중(pending) + 본인 요청이면 즉시 취소
     if req.status == 'pending' and user_id == req.applicant_id:
+        # 연차/반차인 경우 연차 원복
+        if req.type in ['연차', '반차(오전)', '반차(오후)']:
+            emp = Employee.query.get(req.target_id)
+            emp.used_leave = round_to_half(emp.used_leave - req.leave_days)
+            emp.remaining_leave = round_to_half(emp.annual_leave - emp.used_leave)
+        
         req.status = 'cancelled'
         req.cancel_at = get_kst_now()
         db.session.commit()
@@ -545,13 +488,11 @@ def approve(req_id):
     if req.status in ['pending','cancel_pending']:
         req.status = 'approved'
         req.processed_at = get_kst_now()
-        if req.type in ['연차','반차(오전)', '반차(오후)']:
-            # 승인 시 used_leave/remaining_leave는 이미 차감되어 있음
-            pass
         if req.cancel_requested:
             # 취소 승인 시 연차 원복
-            emp.used_leave = round_to_half(emp.used_leave - req.leave_days)
-            emp.remaining_leave = round_to_half(emp.annual_leave - emp.used_leave)
+            if req.type in ['연차', '반차(오전)', '반차(오후)']:
+                emp.used_leave = round_to_half(emp.used_leave - req.leave_days)
+                emp.remaining_leave = round_to_half(emp.annual_leave - emp.used_leave)
             req.status = 'cancelled'
         db.session.commit()
     return redirect(url_for('status'))
@@ -565,8 +506,8 @@ def reject(req_id):
     if req.status in ['pending','cancel_pending']:
         req.status = 'rejected'
         req.processed_at = get_kst_now()
-        if req.type in ['연차','반차(오전)', '반차(오후)']:
-            # 거절 시 used_leave/remaining_leave 원복
+        # 거절 시 연차 원복
+        if req.type in ['연차', '반차(오전)', '반차(오후)']:
             emp.used_leave = round_to_half(emp.used_leave - req.leave_days)
             emp.remaining_leave = round_to_half(emp.annual_leave - emp.used_leave)
         db.session.commit()
@@ -1011,7 +952,7 @@ translations = {
         'english': 'English',
         'user_id': '아이디',
         'password': '비밀번호',
-        'please_sign_in': '계속하려면 로그인하세요',
+        'please_sign_in': '회사 이메일을 입력하세요',
         'contact_dev': '계정 등록 또는 비밀번호 문의는 아래 메일로 문의해주세요',
         'half_morning_top': '반차',
         'half_morning_bottom': '오전',
@@ -1310,29 +1251,23 @@ def reject_leave(request_id):
     
     return redirect(url_for('leave_status'))
 
-def count_weekdays(start, end):
-    """주말과 공휴일을 제외한 평일 수를 계산"""
-    days = 0
-    current = start
-    while current <= end:
-        if is_valid_leave_date(current):
-            days += 1
-        current += timedelta(days=1)
-    return days
+def display_leave_type(type_code, lang=None):
+    mapping = {
+        '연차': {'ko': '연차', 'en': 'Annual Leave'},
+        '반차(오전)': {'ko': '반차(오전)', 'en': 'Half Day (Morning)'},
+        '반차(오후)': {'ko': '반차(오후)', 'en': 'Half Day (Afternoon)'},
+        '출장': {'ko': '출장', 'en': 'Business Trip'},
+    }
+    if lang is None:
+        lang = get_locale() if 'get_locale' in globals() else 'ko'
+    return mapping.get(type_code, {}).get(lang, type_code)
 
-def admin_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not session.get('user_id') or Employee.query.get(session['user_id']).role != 'admin':
-            flash('관리자 권한이 필요합니다.', 'error')
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    return decorated_function
+app.jinja_env.globals['display_leave_type'] = display_leave_type
 
 if __name__ == '__main__':
     with app.app_context():
         # 모든 공휴일 데이터 삭제
-        Holiday.query.delete()
+        # Holiday.query.delete()  # Holiday 관련 데이터 삭제 코드 제거
         db.session.commit()
         db.create_all()
         
@@ -1374,6 +1309,7 @@ if __name__ == '__main__':
         
         # 가상 직원 3명 자동 추가 (중복 방지)
         if Employee.query.count() == 0:
+            import bcrypt
             db.session.add(Employee(
                 name='Juho',
                 department='Dev team 1',
@@ -1381,7 +1317,10 @@ if __name__ == '__main__':
                 join_date=datetime.strptime('2023-01-01', '%Y-%m-%d'),
                 annual_leave=15,
                 used_leave=0,
-                remaining_leave=15
+                remaining_leave=15,
+                user_id='juho',
+                user_pw_hash=bcrypt.hashpw('testpw'.encode('utf-8'), bcrypt.gensalt()),
+                role='user'
             ))
             db.session.add(Employee(
                 name='Yeseul',
@@ -1390,7 +1329,10 @@ if __name__ == '__main__':
                 join_date=datetime.strptime('2022-03-15', '%Y-%m-%d'),
                 annual_leave=15,
                 used_leave=0,
-                remaining_leave=15
+                remaining_leave=15,
+                user_id='yeseul',
+                user_pw_hash=bcrypt.hashpw('testpw'.encode('utf-8'), bcrypt.gensalt()),
+                role='user'
             ))
             db.session.add(Employee(
                 name='Erdem',
@@ -1399,7 +1341,10 @@ if __name__ == '__main__':
                 join_date=datetime.strptime('2021-07-10', '%Y-%m-%d'),
                 annual_leave=15,
                 used_leave=0,
-                remaining_leave=15
+                remaining_leave=15,
+                user_id='erdem',
+                user_pw_hash=bcrypt.hashpw('testpw'.encode('utf-8'), bcrypt.gensalt()),
+                role='user'
             ))
             db.session.commit()
         

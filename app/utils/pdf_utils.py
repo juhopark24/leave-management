@@ -5,7 +5,7 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-
+import os
 
 def generate_leave_pdf(req, emp):
     """Return BytesIO buffer and filename for a leave request PDF."""
@@ -22,19 +22,22 @@ def generate_leave_pdf(req, emp):
     pdfmetrics.registerFont(TTFont('RobotoCondensed-Medium', 'static/fonts/Roboto_Condensed-Medium.ttf'))
     pdfmetrics.registerFont(TTFont('RobotoCondensed-Thin', 'static/fonts/Roboto_Condensed-Thin.ttf'))
     pdfmetrics.registerFont(TTFont('RobotoCondensed-Italic', 'static/fonts/Roboto_Condensed-Italic.ttf'))
+    pdfmetrics.registerFont(TTFont('Inspiration', 'static/fonts/Inspiration-Regular.ttf'))
 
     title_style = ParagraphStyle('Title', parent=styles['Normal'], fontName='RobotoCondensed-Bold', fontSize=26,
-                                  alignment=1, spaceAfter=28, leading=32)
+                                   alignment=1, spaceAfter=28, leading=32)
     label_style = ParagraphStyle('Label', parent=styles['Normal'], fontName='RobotoCondensed-Bold', fontSize=13,
-                                  alignment=1, leading=18)
+                                   alignment=1, leading=18)
     value_style_ko = ParagraphStyle('ValueKO', parent=styles['Normal'], fontName='NanumGothic', fontSize=13,
-                                    alignment=1, leading=18, wordWrap='CJK')
+                                     alignment=1, leading=18, wordWrap='CJK')
     sign_label_style = ParagraphStyle('SignLabel', parent=styles['Normal'], fontName='RobotoCondensed-Bold', fontSize=12,
-                                      alignment=0, leading=16)
+                                       alignment=0, leading=16)
     sign_value_style = ParagraphStyle('SignValue', parent=styles['Normal'], fontName='NanumGothic', fontSize=12,
-                                      alignment=0, leading=16)
+                                       alignment=0, leading=16)
     sign_value_italic = ParagraphStyle('SignValueItalic', parent=styles['Normal'], fontName='RobotoCondensed-Italic',
-                                       fontSize=12, alignment=0, leading=16)
+                                        fontSize=12, alignment=0, leading=16)
+    signature_style = ParagraphStyle('Signature', parent=styles['Normal'], fontName='Inspiration', fontSize=20,
+                                      alignment=0, leading=24)
 
     start_str = req.start_date.strftime('%Y.%m.%d')
     end_str = req.end_date.strftime('%Y.%m.%d')
@@ -81,7 +84,8 @@ def generate_leave_pdf(req, emp):
 
     sign_table_data = [
         [Paragraph('Date', sign_label_style), Paragraph(req.created_at.strftime('%Y-%m-%d'), sign_value_style), '', ''],
-        [Paragraph('Applicant', sign_label_style), Paragraph(emp.name, sign_value_style), Paragraph('Signature', sign_label_style), Paragraph('________________ ' + (emp.eng_name or ''), sign_value_italic)]
+        [Paragraph('Applicant', sign_label_style), Paragraph(emp.name, sign_value_style), Paragraph('Signature', sign_label_style), 
+         Paragraph(emp.eng_name, signature_style)]
     ]
     sign_table = Table(sign_table_data, colWidths=[70, 150, 70, 170], hAlign='LEFT')
     sign_table.setStyle(TableStyle([

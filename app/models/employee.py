@@ -1,5 +1,5 @@
 from datetime import datetime
-from app.extensions import db
+from . import db
 from werkzeug.security import generate_password_hash, check_password_hash
 
 class Employee(db.Model):
@@ -10,24 +10,30 @@ class Employee(db.Model):
     eng_name = db.Column(db.String(100))
     department = db.Column(db.String(100))
     position = db.Column(db.String(100))
-    join_date = db.Column(db.Date, nullable=False)
-    annual_leave = db.Column(db.Float, default=0)
+    join_date = db.Column(db.DateTime, nullable=False)
+    annual_leave = db.Column(db.Float, default=15)
     used_leave = db.Column(db.Float, default=0)
-    remaining_leave = db.Column(db.Float, default=0)
+    remaining_leave = db.Column(db.Float, default=15)
     user_id = db.Column(db.String(50), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
-    role = db.Column(db.String(20), default='user')
+    user_pw_hash = db.Column(db.LargeBinary(128), nullable=False)
+    role = db.Column(db.String(20), default='user')  # 'admin' or 'user'
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
     
-    leave_requests = db.relationship('LeaveRequest', backref='employee', lazy=True)
-    system_logs = db.relationship('SystemLog', backref='employee', lazy=True)
+    leave_requests = db.relationship('LeaveRequest', 
+                                   foreign_keys='LeaveRequest.target_id',
+                                   backref='employee', 
+                                   lazy=True)
+    applied_requests = db.relationship('LeaveRequest',
+                                     foreign_keys='LeaveRequest.applicant_id',
+                                     backref='applicant',
+                                     lazy=True)
     
     def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
+        self.user_pw_hash = generate_password_hash(password)
         
     def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
+        return check_password_hash(self.user_pw_hash, password)
     
     def update_leave_days(self, annual_leave=None, used_leave=None):
         if annual_leave is not None:
